@@ -2,11 +2,13 @@
   "videos": [
     {
       "title": "Sample Video 1",
-      "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+      "url": "https://www.w3schools.com/html/mov_bbb.mp4",
+      "duration": 10
     },
     {
       "title": "Sample Video 2",
-      "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"
+      "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
+      "duration": 15
     }
   ]
 }

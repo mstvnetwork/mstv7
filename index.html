@@ -1,1 +1,90 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MP4 Playlist Player</title>
+<style>
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    display: flex; justify-content: center; align-items: center;
+    background: #111;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    user-select: none;
+  }
+  #player-container {
+    width: 90vw;
+    max-width: 800px;
+    aspect-ratio: 16 / 9;
+    background: black;
+    pointer-events: none; /* disable touch/click */
+    position: relative;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    background: black;
+    object-fit: contain;
+  }
+  #title {
+    margin-top: 12px;
+    font-size: 1.2rem;
+    text-align: center;
+    user-select: text; /* allow text selection for title */
+  }
+</style>
+</head>
+<body>
+
+<div>
+  <div id="player-container">
+    <video id="video-player" autoplay muted playsinline></video>
+  </div>
+  <div id="title"></div>
+</div>
+
+<script>
+  const videoPlayer = document.getElementById('video-player');
+  const titleElem = document.getElementById('title');
+  let playlist = [];
+  let currentIndex = 0;
+
+  async function loadPlaylist() {
+    try {
+      const response = await fetch('videos.json');
+      const data = await response.json();
+      playlist = data.videos || [];
+      if (playlist.length === 0) {
+        titleElem.textContent = 'No videos found in playlist.';
+        return;
+      }
+      currentIndex = 0;
+      playVideo(currentIndex);
+    } catch (err) {
+      titleElem.textContent = 'Failed to load playlist.';
+      console.error(err);
+    }
+  }
+
+  function playVideo(index) {
+    if (index < 0 || index >= playlist.length) return;
+    const video = playlist[index];
+    videoPlayer.src = video.url;
+    titleElem.textContent = video.title || '';
+    videoPlayer.play().catch(e => console.warn('Autoplay prevented', e));
+  }
+
+  videoPlayer.addEventListener('ended', () => {
+    currentIndex++;
+    if (currentIndex >= playlist.length) currentIndex = 0; // loop playlist
+    playVideo(currentIndex);
+  });
+
+  // Initialize
+  loadPlaylist();
+</script>
+
+</body>
+</html>

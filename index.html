@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MP4 Playlist Player</title>
+<title>Globally Synced MP4 Playlist Player</title>
 <style>
   body, html {
     margin: 0; padding: 0; height: 100%;
@@ -15,24 +14,46 @@
     user-select: none;
   }
   #player-container {
+    position: relative;
     width: 90vw;
     max-width: 800px;
     aspect-ratio: 16 / 9;
     background: black;
-    pointer-events: none; /* disable touch/click */
-    position: relative;
+    pointer-events: none; /* disable user interaction on video */
   }
   video {
     width: 100%;
     height: 100%;
     background: black;
     object-fit: contain;
+    pointer-events: auto; /* allow pointer events only on controls (mute button) */
   }
   #title {
     margin-top: 12px;
     font-size: 1.2rem;
     text-align: center;
-    user-select: text; /* allow text selection for title */
+    user-select: text;
+  }
+  #mute-toggle {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 24px;
+    color: white;
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    background: rgba(0,0,0,0.4);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+  }
+  #mute-toggle:hover {
+    background: rgba(255,255,255,0.3);
   }
 </style>
 </head>
@@ -41,6 +62,7 @@
 <div>
   <div id="player-container">
     <video id="video-player" autoplay muted playsinline></video>
+    <div id="mute-toggle" title="Toggle mute">🔈</div>
   </div>
   <div id="title"></div>
 </div>
@@ -48,9 +70,20 @@
 <script>
   const videoPlayer = document.getElementById('video-player');
   const titleElem = document.getElementById('title');
+  const muteToggle = document.getElementById('mute-toggle');
+
+  // Playlist - will be loaded from JSON
   let playlist = [];
   let currentIndex = 0;
 
+  // GLOBAL START TIME in UTC (ISO format)
+  // Set your playlist global start time here (example: playlist started 2025-08-12T00:00:00Z)
+  const globalStartTimeUTC = '2025-08-12T00:00:00Z';
+
+  // To persist mute state during session
+  let isMuted = true;
+
+  // Load playlist JSON file
   async function loadPlaylist() {
     try {
       const response = await fetch('videos.json');
@@ -60,29 +93,99 @@
         titleElem.textContent = 'No videos found in playlist.';
         return;
       }
-      currentIndex = 0;
-      playVideo(currentIndex);
+      // Convert durations to seconds if not numbers
+      playlist.forEach(v => {
+        v.duration = Number(v.duration) || 0;
+      });
+
+      syncToGlobalTime();
     } catch (err) {
       titleElem.textContent = 'Failed to load playlist.';
       console.error(err);
     }
   }
 
-  function playVideo(index) {
+  // Calculate total duration in seconds
+  function getTotalDuration() {
+    return playlist.reduce((sum, v) => sum + v.duration, 0);
+  }
+
+  // Find which video and offset by elapsed seconds in the playlist
+  function findCurrentVideoAndOffset(elapsedSeconds) {
+    let acc = 0;
+    for (let i = 0; i < playlist.length; i++) {
+      const videoDur = playlist[i].duration;
+      if (elapsedSeconds < acc + videoDur) {
+        return { index: i, offset: elapsedSeconds - acc };
+      }
+      acc += videoDur;
+    }
+    // If elapsedSeconds exceed total (should not happen due to mod), fallback:
+    return { index: 0, offset: 0 };
+  }
+
+  // Sync video to global time
+  function syncToGlobalTime() {
+    const now = new Date();
+    const startTime = new Date(globalStartTimeUTC);
+    let elapsed = (now.getTime() - startTime.getTime()) / 1000; // seconds
+
+    const totalDuration = getTotalDuration();
+    if (totalDuration === 0) {
+      titleElem.textContent = 'Playlist videos missing durations.';
+      return;
+    }
+
+    // Loop elapsed time in playlist duration
+    elapsed = ((elapsed % totalDuration) + totalDuration) % totalDuration;
+
+    const { index, offset } = findCurrentVideoAndOffset(elapsed);
+
+    currentIndex = index;
+    playVideoAtOffset(index, offset);
+  }
+
+  // Play video at given index, starting from offset seconds
+  function playVideoAtOffset(index, offset) {
     if (index < 0 || index >= playlist.length) return;
+
     const video = playlist[index];
     videoPlayer.src = video.url;
     titleElem.textContent = video.title || '';
+    videoPlayer.currentTime = offset;
+
+    videoPlayer.muted = isMuted;
+
     videoPlayer.play().catch(e => console.warn('Autoplay prevented', e));
   }
 
+  // When video ends, play next video from start (still synced, but we will resync on 'timeupdate' instead)
   videoPlayer.addEventListener('ended', () => {
-    currentIndex++;
-    if (currentIndex >= playlist.length) currentIndex = 0; // loop playlist
-    playVideo(currentIndex);
+    currentIndex = (currentIndex + 1) % playlist.length;
+    playVideoAtOffset(currentIndex, 0);
   });
 
-  // Initialize
+  // Optional: On timeupdate, re-sync every 5 seconds to keep global sync accurate (in case user drags or connection lag)
+  videoPlayer.addEventListener('timeupdate', () => {
+    if (!videoPlayer.paused) {
+      const now = Date.now();
+      if (!videoPlayer.lastSync || now - videoPlayer.lastSync > 5000) {
+        videoPlayer.lastSync = now;
+        syncToGlobalTime();
+      }
+    }
+  });
+
+  // Mute toggle button logic
+  muteToggle.addEventListener('click', () => {
+    isMuted = !isMuted;
+    videoPlayer.muted = isMuted;
+    muteToggle.textContent = isMuted ? '🔈' : '🔊';
+  });
+
+  // Initialize mute button text
+  muteToggle.textContent = '🔈';
+
   loadPlaylist();
 </script>
 

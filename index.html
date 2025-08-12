@@ -208,6 +208,7 @@
     <div>&copy; 2025 MSTV Network. All rights reserved.</div>
   </footer>
 
+  <!-- GoatCounter analytics -->
   <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
   <!-- HLS.js and player script -->
@@ -218,13 +219,12 @@
     const playButton = document.getElementById('playButton');
     const loadingOverlay = document.getElementById('loadingOverlay');
 
+    // Replace this with your actual playlist of m3u8 URLs
     let playlist = [
-      { url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", duration: 300 },
-      
+      { url: "", duration: 300 },
+      { url: ""
     ];
-    
-    let videoDurations = [];
-    let totalPlaylistDuration = 0;
+
     let hlsInstance = null;
 
     const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
@@ -250,10 +250,7 @@
       video.play().catch(console.error);
     });
 
-    video.addEventListener('waiting', () => showLoading(true));
-    video.addEventListener('canplay', () => showLoading(false));
-    video.addEventListener('playing', () => showLoading(false));
-
+    // Ensure that the video plays once HLS stream is ready
     function loadHLSStream(url) {
       if (Hls.isSupported()) {
         hlsInstance = new Hls();
@@ -275,6 +272,5 @@
     // Load the first video in the playlist
     loadHLSStream(playlist[0].url);
   </script>
-
 </body>
 </html>

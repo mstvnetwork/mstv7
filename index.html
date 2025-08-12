@@ -125,14 +125,14 @@
         video.addEventListener('loadeddata', updatePlayButton);
         video.addEventListener('error', updatePlayButton);
 
+        // --- KEY CHANGE IS HERE ---
+        // Clicking the play button now calls the main `play()` function
+        // to re-synchronize the video, not just resume playback.
         playButton.addEventListener('click', () => {
-            video.play().catch(e => {
-                console.error("Could not play video:", e);
-                updatePlayButton();
-            });
+            play();
         });
+        // --- END OF KEY CHANGE ---
 
-        // The key part of the workaround: forcing the video back to its live position
         video.addEventListener('seeking', () => {
             isSeeking = true;
             console.log('Seeking detected. Forcing video back to live position.');

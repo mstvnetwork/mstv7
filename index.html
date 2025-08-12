@@ -96,6 +96,7 @@
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
         let currentVideoIndex = -1;
+        let isSeeking = false;
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -121,90 +122,75 @@
         video.addEventListener('loadeddata', updatePlayButton);
         video.addEventListener('error', updatePlayButton);
 
-        playButton.addEventListener('click', () => {
-            // Trigger the single source of truth for playback
-            play(true); 
-        });
-
-        // Event listener for video ending to load the next video
-        video.addEventListener('ended', () => {
-            console.log("Video ended. Playing next video in playlist.");
-            currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
-            playVideoAtIndex(currentVideoIndex);
-        });
-
-        async function initializePlayer() {
-            try {
-                const response = await fetch('playlist.json');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                playlist = await response.json();
-
-                if (!Array.isArray(playlist) || playlist.length === 0) {
-                    console.error("Playlist is empty or invalid.");
-                    return;
-                }
-
-                // This code is removed as we now rely on 'ended' event
-                // videoDurations = await Promise.all(playlist.map(...));
-                // totalPlaylistDuration = videoDurations.reduce(...);
-
-                if (Hls.isSupported()) {
-                    hlsInstance = new Hls();
-                    hlsInstance.attachMedia(video);
-                    hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-                        if (data.fatal) {
-                            console.error("HLS fatal error:", data.details);
-                            hlsInstance.destroy();
-                            hlsInstance = null;
-                            // Attempt to re-initialize to recover
-                            initializePlayer();
-                        }
-                    });
-                }
-                
-                // On initial load, synchronize the player with the correct video.
-                // The 'play' button will handle starting playback.
-                play(false);
-
-            } catch (error) {
-                console.error("Failed to load or parse playlist.json:", error);
-            }
-        }
-        
-        // This function calculates which video to play and at what time.
-        // It's now only called on initial load and when explicitly needed.
-        function play(shouldPlay = false) {
-            const nowInUTC = Date.now();
+        // This is the single, robust function that handles all playback.
+        function syncAndPlay(shouldPlay = false) {
+            const position = getPlaybackPosition();
+            const { index, time } = position;
+            const videoUrl = playlist[index];
             
-            // To get accurate position, we'd need video durations again.
-            // A more robust, but complex, approach would be to calculate a "pseudo" duration.
-            // For simplicity and to fix jitter, we will assume a constant length for each.
-            const averageDuration = 1800; // Assuming 30-minute videos
-            totalPlaylistDuration = playlist.length * averageDuration;
-            const elapsedSeconds = (nowInUTC / 1000) % totalPlaylistDuration;
+            console.log(`Syncing to live. Video Index: ${index}, Time: ${time.toFixed(2)}s`);
 
-            let currentOffset = 0;
-            let videoToPlayIndex = 0;
-            let startTime = 0;
-
-            for (let i = 0; i < playlist.length; i++) {
-                 const duration = averageDuration;
-                 if (elapsedSeconds < currentOffset + duration) {
-                    videoToPlayIndex = i;
-                    startTime = elapsedSeconds - currentOffset;
-                    break;
-                 }
-                 currentOffset += duration;
+            // Check if we need to load a new video source
+            if (index !== currentVideoIndex) {
+                 if (hlsInstance) {
+                    if (!hlsInstance.media) {
+                        hlsInstance.attachMedia(video);
+                    }
+                    hlsInstance.loadSource(videoUrl);
+                    
+                    video.oncanplay = () => {
+                        video.currentTime = time;
+                        if (shouldPlay) {
+                            video.play().catch(e => console.log('Autoplay was prevented:', e));
+                        }
+                        video.oncanplay = null; // Remove listener to prevent re-triggering
+                        currentVideoIndex = index;
+                    };
+    
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    video.oncanplay = () => {
+                        video.currentTime = time;
+                        if (shouldPlay) {
+                           video.play().catch(e => console.log('Autoplay was prevented:', e));
+                        }
+                        video.oncanplay = null;
+                        currentVideoIndex = index;
+                    };
+                }
+            } else {
+                // If it's the same video, just ensure it's playing and correctly timed
+                video.currentTime = time;
+                if (shouldPlay) {
+                    video.play().catch(e => console.log('Autoplay was prevented:', e));
+                }
             }
-
-            console.log(`Synchronized to live. Video Index: ${videoToPlayIndex}, Time: ${startTime.toFixed(2)}s`);
-
-            // Now, load and play the video.
-            playVideoAtIndex(videoToPlayIndex, startTime, shouldPlay);
         }
 
+        // Play button now acts as the sole trigger for synchronization and playback.
+        playButton.addEventListener('click', () => syncAndPlay(true));
+
+        // Re-implementing the seek enforcement from a previous solution.
+        video.addEventListener('seeking', () => {
+            isSeeking = true;
+        });
+
+        video.addEventListener('seeked', () => {
+            if (isSeeking) {
+                const position = getPlaybackPosition();
+                video.currentTime = position.time;
+                isSeeking = false;
+                console.log('Seek attempt reverted. Current time reset to live position.');
+            }
+        });
+
+        // Use 'ended' event to transition between videos smoothly.
+        video.addEventListener('ended', () => {
+            const nextIndex = (currentVideoIndex + 1) % playlist.length;
+            playVideoAtIndex(nextIndex, 0, true);
+        });
+        
+        // This function is for video transitions, not a full re-sync.
         function playVideoAtIndex(index, startTime = 0, shouldPlay = true) {
             const videoUrl = playlist[index];
             currentVideoIndex = index;
@@ -228,6 +214,69 @@
             }
         }
 
+
+        async function initializePlayer() {
+            try {
+                const response = await fetch('playlist.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                playlist = await response.json();
+
+                if (!Array.isArray(playlist) || playlist.length === 0) {
+                    console.error("Playlist is empty or invalid.");
+                    return;
+                }
+                
+                // Fetch video durations to get accurate total playlist duration
+                videoDurations = await Promise.all(playlist.map(url => {
+                    return new Promise((resolve) => {
+                        const tempVideo = document.createElement('video');
+                        tempVideo.onloadedmetadata = () => resolve(tempVideo.duration);
+                        tempVideo.onerror = () => resolve(0);
+                        tempVideo.src = url;
+                    });
+                }));
+
+                totalPlaylistDuration = videoDurations.reduce((acc, curr) => acc + curr, 0);
+
+                if (Hls.isSupported()) {
+                    hlsInstance = new Hls();
+                    hlsInstance.attachMedia(video);
+                    hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            console.error("HLS fatal error:", data.details);
+                            hlsInstance.destroy();
+                            hlsInstance = null;
+                            initializePlayer(); // Re-initialize to recover
+                        }
+                    });
+                }
+                
+                // On initial load, just sync the video without playing.
+                // The user's click will start the video.
+                syncAndPlay(false);
+
+            } catch (error) {
+                console.error("Failed to load or parse playlist.json:", error);
+            }
+        }
+
+        function getPlaybackPosition() {
+            const nowInUTC = Date.now();
+            const elapsedSeconds = (nowInUTC / 1000) % totalPlaylistDuration;
+            
+            let currentOffset = 0;
+            for (let i = 0; i < videoDurations.length; i++) {
+                const duration = videoDurations[i];
+                if (elapsedSeconds < currentOffset + duration) {
+                    return { index: i, time: elapsedSeconds - currentOffset };
+                }
+                currentOffset += duration;
+            }
+            return { index: 0, time: 0 };
+        }
+        
         document.addEventListener('DOMContentLoaded', initializePlayer);
     </script>
 </body>

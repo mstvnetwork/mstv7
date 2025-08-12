@@ -21,6 +21,8 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
+  <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
+
   <style>
     /* Your existing CSS stays unchanged */
     body {
@@ -85,19 +87,14 @@
       background-color: black;
     }
 
-    #videoPlayer {
+    /* Video.js player specific styling to match your theme */
+    .video-js {
       width: 100%;
-      pointer-events: none;
-      user-select: none;
+      pointer-events: none; /* Keep pointer events off the video element */
     }
 
-    #videoPlayer::-webkit-media-controls {
-      display: none !important;
-    }
-    #videoPlayer::-moz-media-controls {
-      display: none !important;
-    }
-    #videoPlayer::media-controls {
+    /* Hide default Video.js controls to use your custom ones */
+    .vjs-control-bar, .vjs-big-play-button {
       display: none !important;
     }
 
@@ -213,7 +210,7 @@
   </div>
 
   <div id="videoContainer">
-    <video id="videoPlayer" autoplay muted playsinline></video>
+    <video id="videoPlayer" class="video-js vjs-default-skin" preload="auto" crossorigin="anonymous" playsinline></video>
     <span id="muteToggle">🔈</span>
     <div id="liveStamp">LIVE</div>
     <div id="playButton">CLICK TO▶️▶️ WATCH LIVE</div>
@@ -247,171 +244,100 @@
 
   <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+  <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script>
+
   <script>
-    const video = document.getElementById('videoPlayer');
-    const muteToggle = document.getElementById('muteToggle');
-    const playButton = document.getElementById('playButton');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-
-    let playlist = [];
-    let videoDurations = [];
-    let totalPlaylistDuration = 0;
-    let hlsInstance = null;
-    let isSeeking = false;
+    let player;
     let hasUserInteracted = false;
-
-    // Use a flag to prevent multiple play attempts after the first click
     let hasPlaylistLoaded = false;
+    let playlist = [];
 
-    // Mute/Unmute logic
-    const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
-    if (isUnmuted) {
-      video.muted = false;
-      muteToggle.textContent = '🔊';
-    }
+    // Initialize the Video.js player
+    function initializeVideoPlayer() {
+      // Create a Video.js player instance
+      player = videojs('videoPlayer', {
+        autoplay: 'muted', // This will automatically start muted
+        techOrder: ['html5'], // Use standard HTML5 tech
+        muted: true, // Start muted to comply with autoplay policy
+        controls: false // Hide default controls
+      });
 
-    muteToggle.addEventListener('click', () => {
-      video.muted = !video.muted;
-      localStorage.setItem('isUnmuted', !video.muted);
-      muteToggle.textContent = video.muted ? '🔈' : '🔊';
-      if (hasUserInteracted) {
-          video.play().catch(console.error);
-      }
-    });
+      // Load mute state from local storage
+      const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
+      player.muted(!isUnmuted); // Set muted state from local storage
+      document.getElementById('muteToggle').textContent = isUnmuted ? '🔊' : '🔈';
 
-    // Loading overlay logic
-    function showLoading(show) {
-      loadingOverlay.style.display = show ? 'flex' : 'none';
-    }
+      // Attach your custom mute button logic to the player
+      document.getElementById('muteToggle').addEventListener('click', () => {
+        const currentMuted = player.muted();
+        player.muted(!currentMuted);
+        localStorage.setItem('isUnmuted', currentMuted);
+        document.getElementById('muteToggle').textContent = currentMuted ? '🔊' : '🔈';
+      });
 
-    video.addEventListener('waiting', () => showLoading(true));
-    video.addEventListener('canplay', () => showLoading(false));
-    video.addEventListener('playing', () => showLoading(false));
-    video.addEventListener('pause', () => showLoading(true));
-    video.addEventListener('ended', () => showLoading(true));
-    video.addEventListener('error', (e) => {
-      console.error("Video error:", e);
-      showLoading(true);
-    });
+      // Attach your custom play button logic
+      document.getElementById('playButton').addEventListener('click', () => {
+        if (!hasUserInteracted) {
+          hasUserInteracted = true;
+          document.getElementById('playButton').style.display = 'none';
+          showLoading(true);
+          // Set the source and start playback
+          if (hasPlaylistLoaded && playlist.length > 0) {
+            setVideoSource(playlist[0]);
+          }
+        }
+      });
 
-    // User interaction to start playback
-    playButton.addEventListener('click', () => {
-      if (!hasUserInteracted) {
-        hasUserInteracted = true;
-        playButton.style.display = 'none';
+      // Attach loading overlay logic
+      player.on('waiting', () => showLoading(true));
+      player.on('loadeddata', () => showLoading(false));
+      player.on('playing', () => showLoading(false));
+      player.on('error', (e) => {
+        console.error("Video.js error:", e);
         showLoading(true);
-        // Play the video only after the playlist has loaded
-        if (hasPlaylistLoaded) {
-            playVideo();
-        }
-      }
-    });
-    
-    // Playback position synchronization
-    video.addEventListener('seeking', () => isSeeking = true);
-    video.addEventListener('seeked', () => {
-      if (isSeeking) {
-        const pos = getPlaybackPosition();
-        if (Math.abs(video.currentTime - pos.time) > 0.5) {
-          video.currentTime = pos.time;
-        }
-        isSeeking = false;
-      }
-    });
+      });
+    }
 
-    setInterval(() => {
-      if (!video.paused && !isSeeking) {
-        const pos = getPlaybackPosition();
-        if (Math.abs(video.currentTime - pos.time) > 2) { // Increase threshold for stability
-          video.currentTime = pos.time;
-        }
-      }
-    }, 2000);
+    // Set the video source
+    function setVideoSource(url) {
+      const source = {
+        src: url,
+        type: 'application/x-mpegURL' // HLS MIME type
+      };
+      player.src(source);
+      player.play().catch(e => {
+        console.error("Video playback failed:", e);
+        showLoading(true);
+      });
+    }
 
-    // Playlist and duration calculation
-    async function initializePlaylist() {
+    // Show/hide loading overlay
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+
+    // Fetch the playlist.json on page load
+    async function fetchPlaylist() {
       try {
         const response = await fetch('playlist.json');
         playlist = await response.json();
-        if (!Array.isArray(playlist) || playlist.length === 0) {
+        if (Array.isArray(playlist) && playlist.length > 0) {
+          hasPlaylistLoaded = true;
+        } else {
           console.error("Playlist is empty or invalid.");
-          return;
+          showLoading(true);
         }
-
-        // We can skip calculating durations if the playlist consists of a single HLS stream
-        // For a playlist of multiple files, this is necessary.
-        // Assuming it's a single HLS stream for a live channel, we can simplify this.
-        // Let's assume for a live channel, the playlist.json has a single HLS URL.
-        // If it's multiple files, the original duration calculation is still needed.
-        
-        hasPlaylistLoaded = true;
-
       } catch (err) {
-        console.error("Playlist load error:", err);
+        console.error("Failed to fetch playlist.json:", err);
+        showLoading(true);
       }
     }
 
-    // Main play function
-    function playVideo() {
-        if (!playlist || playlist.length === 0) {
-            return;
-        }
-        
-        const url = playlist[0]; // Assuming playlist.json contains a single URL
-
-        if (hlsInstance) {
-            hlsInstance.destroy();
-            hlsInstance = null;
-        }
-
-        if (Hls.isSupported()) {
-            hlsInstance = new Hls();
-            hlsInstance.loadSource(url);
-            hlsInstance.attachMedia(video);
-            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play().catch(console.error);
-            });
-            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-                console.error("HLS fatal error:", data);
-                if (data.fatal) {
-                    playNative(url);
-                }
-            });
-        } else {
-            playNative(url);
-        }
-    }
-    
-    // Native playback fallback function
-    function playNative(url) {
-        if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = url;
-            video.onloadedmetadata = () => {
-                video.play().catch(console.error);
-            };
-        } else {
-            console.error("This browser does not support HLS streaming.");
-            showLoading(true);
-        }
-    }
-
-    // This function is still useful for a multi-file playlist but might be simplified
-    // if the playlist contains a single, continuously updated HLS stream.
-    function getPlaybackPosition() {
-      const now = Date.now() / 1000 % totalPlaylistDuration;
-      let offset = 0;
-      for (let i = 0; i < videoDurations.length; i++) {
-        if (now < offset + videoDurations[i]) {
-          return { index: i, time: now - offset };
-        }
-        offset += videoDurations[i];
-      }
-      return { index: 0, time: 0 };
-    }
-
-    // Initialize the playlist on page load
-    document.addEventListener('DOMContentLoaded', initializePlaylist);
+    // Initial setup on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchPlaylist().then(initializeVideoPlayer);
+    });
   </script>
 </body>
-</html>
+  </html>

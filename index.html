@@ -52,6 +52,74 @@
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
     
-    <script src="script.js"></script>
+    <script>
+        // Get the video element.
+        const video = document.getElementById('videoPlayer');
+
+        // Function to fetch the playlist and start playback.
+        async function initializePlayer() {
+            console.log("Initializing player...");
+            try {
+                // Fetch the playlist.json file from the same repository.
+                const response = await fetch('playlist.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const playlist = await response.json();
+
+                // Check if the playlist is valid and not empty.
+                if (!Array.isArray(playlist) || playlist.length === 0) {
+                    console.error("Playlist is empty or invalid.");
+                    return;
+                }
+
+                let currentVideoIndex = 0;
+                let hls;
+
+                function playNextVideo() {
+                    if (currentVideoIndex >= playlist.length) {
+                        console.log("End of playlist. Looping back to the beginning.");
+                        currentVideoIndex = 0; // Loop back to the start.
+                    }
+
+                    const videoUrl = playlist[currentVideoIndex];
+                    console.log(`Now playing: ${videoUrl}`);
+
+                    if (Hls.isSupported()) {
+                        if (!hls) {
+                            hls = new Hls();
+                            hls.attachMedia(video);
+                            
+                            hls.on(Hls.Events.ERROR, function (event, data) {
+                                if (data.fatal) {
+                                    console.error("HLS fatal error:", data.details);
+                                    // On a fatal error, try the next video.
+                                    playNextVideo();
+                                }
+                            });
+                        }
+                        hls.loadSource(videoUrl);
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        // Fallback for native HLS support (Safari).
+                        video.src = videoUrl;
+                    }
+
+                    currentVideoIndex++;
+                }
+
+                // Add event listener for when a video ends.
+                video.addEventListener('ended', playNextVideo);
+                
+                // Start the process by playing the first video.
+                playNextVideo();
+
+            } catch (error) {
+                console.error("Failed to load or parse playlist.json:", error);
+            }
+        }
+
+        // Initialize the player when the DOM is ready.
+        document.addEventListener('DOMContentLoaded', initializePlayer);
+    </script>
 </body>
 </html>

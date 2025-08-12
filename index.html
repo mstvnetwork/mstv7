@@ -63,7 +63,7 @@
             cursor: pointer;
             z-index: 11;
             border: 2px solid white;
-            display: block; /* Always visible when the video is paused */
+            display: block;
         }
         @media (max-width: 768px) {
             h1 {
@@ -95,6 +95,7 @@
         let videoDurations = [];
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
+        let isSeeking = false;
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -111,7 +112,6 @@
             }
         });
         
-        // This is the key change: a single function to manage the play button's visibility
         function updatePlayButton() {
             if (video.paused) {
                 playButton.style.display = 'block';
@@ -128,9 +128,25 @@
         playButton.addEventListener('click', () => {
             video.play().catch(e => {
                 console.error("Could not play video:", e);
-                // On error, the button remains visible so the user can try again
                 updatePlayButton();
             });
+        });
+
+        // The key part of the workaround: forcing the video back to its live position
+        video.addEventListener('seeking', () => {
+            isSeeking = true;
+            console.log('Seeking detected. Forcing video back to live position.');
+        });
+
+        video.addEventListener('seeked', () => {
+            if (isSeeking) {
+                const position = getPlaybackPosition();
+                if (video.currentTime !== position.time) {
+                    video.currentTime = position.time;
+                    console.log('Seek attempt reverted. Current time reset to live position.');
+                }
+                isSeeking = false;
+            }
         });
 
         async function initializePlayer() {
@@ -170,10 +186,8 @@
                     });
                 }
                 
-                // Call play() to start the process on initial page load
                 play();
                 
-                // Re-sync every minute to keep playback accurate
                 setInterval(play, 60000);
 
             } catch (error) {
@@ -224,7 +238,6 @@
                 };
             }
             
-            // Check video state after a short delay to ensure the play button is updated
             setTimeout(updatePlayButton, 500);
         }
         

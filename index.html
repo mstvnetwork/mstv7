@@ -218,11 +218,14 @@
     const playButton = document.getElementById('playButton');
     const loadingOverlay = document.getElementById('loadingOverlay');
 
-    let playlist = [];
+    let playlist = [
+      { url: "", duration: 300 },
+      
+    ];
+    
     let videoDurations = [];
     let totalPlaylistDuration = 0;
     let hlsInstance = null;
-    let isSeeking = false;
 
     const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
     if (isUnmuted) {
@@ -242,38 +245,14 @@
     }
 
     playButton.addEventListener('click', () => {
-      playButton.style.display = 'none';
+      playButton.style.display = 'none'; // Hide permanently
       showLoading(true);
       video.play().catch(console.error);
     });
 
-    video.addEventListener('waiting', () => {
-      showLoading(true);
-    });
-
-    video.addEventListener('playing', () => {
-      showLoading(false);
-    });
-
-    function loadPlaylist() {
-      fetch('playlist.json')
-        .then(response => response.json())
-        .then(loadedPlaylist => {
-          playlist = loadedPlaylist;
-          if (!Array.isArray(playlist) || playlist.length === 0) {
-            throw new Error('Invalid playlist data');
-          }
-          playlist.forEach((item, index) => {
-            videoDurations.push(item.duration);
-            totalPlaylistDuration += item.duration;
-          });
-          loadHLSStream(playlist[0].url);
-        })
-        .catch(error => {
-          console.error('Error loading playlist:', error);
-          alert('Failed to load playlist.');
-        });
-    }
+    video.addEventListener('waiting', () => showLoading(true));
+    video.addEventListener('canplay', () => showLoading(false));
+    video.addEventListener('playing', () => showLoading(false));
 
     function loadHLSStream(url) {
       if (Hls.isSupported()) {
@@ -293,7 +272,8 @@
       }
     }
 
-    loadPlaylist();
+    // Load the first video in the playlist
+    loadHLSStream(playlist[0].url);
   </script>
 
 </body>

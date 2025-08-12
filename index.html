@@ -48,7 +48,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Hide default browser controls in Safari/Chrome/Samsung */
         #videoPlayer::-webkit-media-controls {
             display: none !important;
         }
@@ -113,6 +112,7 @@
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
         let isSeeking = false;
+        let seekCheckInterval = null;
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -125,18 +125,29 @@
             localStorage.setItem('isUnmuted', !video.muted);
             muteToggle.textContent = video.muted ? '🔈' : '🔊';
             if (!video.paused) {
-                 video.play().catch(e => console.log('Autoplay was prevented:', e));
+                video.play().catch(e => console.log('Autoplay was prevented:', e));
             }
         });
-        
+
         function updatePlayButton() {
             playButton.style.display = video.paused ? 'block' : 'none';
         }
 
-        video.addEventListener('play', updatePlayButton);
-        video.addEventListener('pause', updatePlayButton);
+        video.addEventListener('play', () => {
+            updatePlayButton();
+            startSeekCheck();
+        });
+
+        video.addEventListener('pause', () => {
+            updatePlayButton();
+            stopSeekCheck();
+        });
+
         video.addEventListener('loadeddata', updatePlayButton);
         video.addEventListener('error', updatePlayButton);
+        video.addEventListener('waiting', stopSeekCheck);  // Buffering
+        video.addEventListener('playing', startSeekCheck); // Resumed
+        video.addEventListener('ended', stopSeekCheck);    // Ended
 
         playButton.addEventListener('click', () => {
             video.play().catch(e => {
@@ -161,14 +172,22 @@
             }
         });
 
-        // Fallback: Periodic check to revert any sneak-seeks
-        setInterval(() => {
-            const position = getPlaybackPosition();
-            if (Math.abs(video.currentTime - position.time) > 1) {
-                video.currentTime = position.time;
-                console.log('Seek attempt corrected via interval check.');
-            }
-        }, 5000);
+        // Smart interval-based fallback (only active while playing)
+        function startSeekCheck() {
+            if (seekCheckInterval) return; // Already running
+            seekCheckInterval = setInterval(() => {
+                const position = getPlaybackPosition();
+                if (Math.abs(video.currentTime - position.time) > 1) {
+                    video.currentTime = position.time;
+                    console.log('Seek attempt corrected via interval check.');
+                }
+            }, 10000); // 🕒 Adjust interval here (ms)
+        }
+
+        function stopSeekCheck() {
+            clearInterval(seekCheckInterval);
+            seekCheckInterval = null;
+        }
 
         async function initializePlayer() {
             try {
@@ -208,8 +227,7 @@
                 }
                 
                 play();
-                
-                setInterval(play, 60000); // Refresh every 60s
+                setInterval(play, 60000); // Refresh stream every 60s
 
             } catch (error) {
                 console.error("Failed to load or parse playlist.json:", error);
@@ -235,7 +253,7 @@
             const position = getPlaybackPosition();
             const { index, time } = position;
             const videoUrl = playlist[index];
-            
+
             console.log(`Now playing: ${videoUrl} at position: ${time.toFixed(2)}s`);
 
             if (hlsInstance) {
@@ -254,14 +272,15 @@
                 video.src = videoUrl;
                 video.oncanplay = () => {
                     video.currentTime = time;
+                    video.play().catch(e => console.log('Autoplay was prevented:', e
                     video.play().catch(e => console.log('Autoplay was prevented:', e));
                     video.oncanplay = null;
                 };
             }
-            
+
             setTimeout(updatePlayButton, 500);
         }
-        
+
         document.addEventListener('DOMContentLoaded', initializePlayer);
     </script>
 </body>

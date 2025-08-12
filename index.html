@@ -19,11 +19,9 @@
 
   <title>MSTV Network</title>
 
-  <!-- Font Awesome for Facebook Icon -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
   <style>
-    /* Your existing CSS stays unchanged */
     body {
       background-color: #1a1a1a;
       color: white;
@@ -61,21 +59,6 @@
       100% { transform: translateX(-100%); }
     }
 
-    .image-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      padding: 20px;
-    }
-
-    .image-grid img {
-      width: 100%;
-      height: 100px;
-      object-fit: cover;
-      border: 2px solid #333;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-    }
-
     #videoContainer {
       position: relative;
       width: 90%;
@@ -90,10 +73,6 @@
       width: 100%;
       pointer-events: none;
       user-select: none;
-    }
-
-    #videoPlayer::-webkit-media-controls {
-      display: none !important;
     }
 
     #muteToggle {
@@ -224,24 +203,11 @@
     </a>
   </div>
 
-  <div class="image-grid">
-    <!-- Images same as before -->
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.png" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(4).jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/live-sports-plus-hd-otk-logo.webp" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/81GCH6UU7qL.png" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(2).jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(1).png" />
-  </div>
-
   <footer>
     <div>About Us: MSTV is your trusted source for streaming content 24/7.</div>
     <div>&copy; 2025 MSTV Network. All rights reserved.</div>
   </footer>
 
-  <!-- GoatCounter analytics -->
   <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
   <!-- HLS.js and player script -->
@@ -276,105 +242,59 @@
     }
 
     playButton.addEventListener('click', () => {
-      playButton.style.display = 'none'; // Hide permanently
+      playButton.style.display = 'none';
       showLoading(true);
       video.play().catch(console.error);
     });
 
-    video.addEventListener('waiting', () => showLoading(true));
-    video.addEventListener('canplay', () => showLoading(false));
-    video.addEventListener('playing', () => showLoading(false));
-    video.addEventListener('pause', () => showLoading(true));
-    video.addEventListener('ended', () => showLoading(true));
-    video.addEventListener('error', () => showLoading(true));
-
-    video.addEventListener('seeking', () => isSeeking = true);
-    video.addEventListener('seeked', () => {
-      if (isSeeking) {
-        const pos = getPlaybackPosition();
-        if (Math.abs(video.currentTime - pos.time) > 0.5) {
-          video.currentTime = pos.time;
-        }
-        isSeeking = false;
-      }
+    video.addEventListener('waiting', () => {
+      showLoading(true);
     });
 
-    setInterval(() => {
-      const pos = getPlaybackPosition();
-      if (Math.abs(video.currentTime - pos.time) > 1) {
-        video.currentTime = pos.time;
-      }
-    }, 2000);
+    video.addEventListener('playing', () => {
+      showLoading(false);
+    });
 
-    async function initializePlayer() {
-      try {
-        const response = await fetch('playlist.json');
-        playlist = await response.json();
-        if (!Array.isArray(playlist) || playlist.length === 0) return;
-
-        videoDurations = await Promise.all(playlist.map(url => {
-          return new Promise(resolve => {
-            const temp = document.createElement('video');
-            temp.onloadedmetadata = () => resolve(temp.duration);
-            temp.onerror = () => resolve(0);
-            temp.src = url;
+    function loadPlaylist() {
+      fetch('playlist.json')
+        .then(response => response.json())
+        .then(loadedPlaylist => {
+          playlist = loadedPlaylist;
+          if (!Array.isArray(playlist) || playlist.length === 0) {
+            throw new Error('Invalid playlist data');
+          }
+          playlist.forEach((item, index) => {
+            videoDurations.push(item.duration);
+            totalPlaylistDuration += item.duration;
           });
-        }));
-
-        totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
-
-        if (Hls.isSupported()) {
-          hlsInstance = new Hls();
-          hlsInstance.attachMedia(video);
-          hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              hlsInstance.destroy();
-              hlsInstance = null;
-              play();
-            }
-          });
-        }
-
-        play();
-      } catch (err) {
-        console.error("Playlist load error:", err);
-      }
+          loadHLSStream(playlist[0].url);
+        })
+        .catch(error => {
+          console.error('Error loading playlist:', error);
+          alert('Failed to load playlist.');
+        });
     }
 
-    function getPlaybackPosition() {
-      const now = Date.now() / 1000 % totalPlaylistDuration;
-      let offset = 0;
-      for (let i = 0; i < videoDurations.length; i++) {
-        if (now < offset + videoDurations[i]) {
-          return { index: i, time: now - offset };
-        }
-        offset += videoDurations[i];
-      }
-      return { index: 0, time: 0 };
-    }
-
-    function play() {
-      const { index, time } = getPlaybackPosition();
-      const url = playlist[index];
-
-      if (hlsInstance) {
+    function loadHLSStream(url) {
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls();
         hlsInstance.loadSource(url);
-        video.oncanplay = () => {
-          video.currentTime = time;
-          video.play().catch(console.log);
-          video.oncanplay = null;
-        };
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          showLoading(false);
+          video.play();
+        });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
-        video.oncanplay = () => {
-          video.currentTime = time;
-          video.play().catch(console.log);
-          video.oncanplay = null;
-        };
+        showLoading(false);
+        video.play();
+      } else {
+        alert('Your browser does not support this video format.');
       }
     }
 
-    document.addEventListener('DOMContentLoaded', initializePlayer);
+    loadPlaylist();
   </script>
+
 </body>
 </html>

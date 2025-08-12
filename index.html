@@ -50,6 +50,21 @@
             cursor: pointer;
             z-index: 10;
         }
+        #playButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            padding: 15px 30px;
+            cursor: pointer;
+            z-index: 11;
+            border: 2px solid white;
+            display: none; /* Initially hidden */
+        }
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8em;
@@ -67,6 +82,7 @@
     <div id="videoContainer">
         <video id="videoPlayer" autoplay muted></video>
         <span id="muteToggle">🔈</span>
+        <div id="playButton">▶️</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
@@ -74,11 +90,11 @@
     <script>
         const video = document.getElementById('videoPlayer');
         const muteToggle = document.getElementById('muteToggle');
+        const playButton = document.getElementById('playButton');
         let playlist = [];
         let videoDurations = [];
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
-        let isVideoReadyToPlay = false;
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -90,10 +106,21 @@
             video.muted = !video.muted;
             localStorage.setItem('isUnmuted', !video.muted);
             muteToggle.textContent = video.muted ? '🔈' : '🔊';
-            // Attempt to play immediately after unmuting
             if (!video.paused) {
                  video.play().catch(e => console.log('Autoplay was prevented:', e));
             }
+        });
+        
+        video.addEventListener('play', () => {
+            playButton.style.display = 'none';
+        });
+
+        video.addEventListener('pause', () => {
+            playButton.style.display = 'block';
+        });
+
+        playButton.addEventListener('click', () => {
+            video.play().catch(e => console.error("Could not play video:", e));
         });
 
         async function initializePlayer() {
@@ -164,12 +191,6 @@
             
             console.log(`Now playing: ${videoUrl} at position: ${time.toFixed(2)}s`);
 
-            // This flag helps prevent multiple play() calls
-            if (isVideoReadyToPlay) {
-                video.pause();
-                isVideoReadyToPlay = false;
-            }
-
             if (hlsInstance) {
                 if (!hlsInstance.media) {
                     hlsInstance.attachMedia(video);
@@ -180,7 +201,6 @@
                     video.currentTime = time;
                     video.play().catch(e => console.log('Autoplay was prevented:', e));
                     video.oncanplay = null;
-                    isVideoReadyToPlay = true;
                 };
 
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -189,7 +209,6 @@
                     video.currentTime = time;
                     video.play().catch(e => console.log('Autoplay was prevented:', e));
                     video.oncanplay = null;
-                    isVideoReadyToPlay = true;
                 };
             }
         }

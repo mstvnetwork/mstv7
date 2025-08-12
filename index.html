@@ -259,10 +259,12 @@
     let totalPlaylistDuration = 0;
     let hlsInstance = null;
     let isSeeking = false;
-
-    // Use a flag to prevent multiple play attempts after the first click
     let hasUserInteracted = false;
 
+    // Use a flag to prevent multiple play attempts after the first click
+    let hasPlaylistLoaded = false;
+
+    // Mute/Unmute logic
     const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
     if (isUnmuted) {
       video.muted = false;
@@ -273,32 +275,40 @@
       video.muted = !video.muted;
       localStorage.setItem('isUnmuted', !video.muted);
       muteToggle.textContent = video.muted ? '🔈' : '🔊';
-      // If the video is not playing, this will also attempt to play it
-      if (video.paused) {
+      if (hasUserInteracted) {
           video.play().catch(console.error);
       }
     });
 
+    // Loading overlay logic
     function showLoading(show) {
       loadingOverlay.style.display = show ? 'flex' : 'none';
     }
-
-    playButton.addEventListener('click', () => {
-      if (!hasUserInteracted) {
-        playButton.style.display = 'none';
-        showLoading(true);
-        video.play().catch(console.error);
-        hasUserInteracted = true;
-      }
-    });
 
     video.addEventListener('waiting', () => showLoading(true));
     video.addEventListener('canplay', () => showLoading(false));
     video.addEventListener('playing', () => showLoading(false));
     video.addEventListener('pause', () => showLoading(true));
     video.addEventListener('ended', () => showLoading(true));
-    video.addEventListener('error', () => showLoading(true));
+    video.addEventListener('error', (e) => {
+      console.error("Video error:", e);
+      showLoading(true);
+    });
 
+    // User interaction to start playback
+    playButton.addEventListener('click', () => {
+      if (!hasUserInteracted) {
+        hasUserInteracted = true;
+        playButton.style.display = 'none';
+        showLoading(true);
+        // Play the video only after the playlist has loaded
+        if (hasPlaylistLoaded) {
+            playVideo();
+        }
+      }
+    });
+    
+    // Playback position synchronization
     video.addEventListener('seeking', () => isSeeking = true);
     video.addEventListener('seeked', () => {
       if (isSeeking) {
@@ -311,35 +321,83 @@
     });
 
     setInterval(() => {
-      const pos = getPlaybackPosition();
-      if (Math.abs(video.currentTime - pos.time) > 1) {
-        video.currentTime = pos.time;
+      if (!video.paused && !isSeeking) {
+        const pos = getPlaybackPosition();
+        if (Math.abs(video.currentTime - pos.time) > 2) { // Increase threshold for stability
+          video.currentTime = pos.time;
+        }
       }
     }, 2000);
 
-    async function initializePlayer() {
+    // Playlist and duration calculation
+    async function initializePlaylist() {
       try {
         const response = await fetch('playlist.json');
         playlist = await response.json();
-        if (!Array.isArray(playlist) || playlist.length === 0) return;
+        if (!Array.isArray(playlist) || playlist.length === 0) {
+          console.error("Playlist is empty or invalid.");
+          return;
+        }
 
-        videoDurations = await Promise.all(playlist.map(url => {
-          return new Promise(resolve => {
-            const temp = document.createElement('video');
-            temp.onloadedmetadata = () => resolve(temp.duration);
-            temp.onerror = () => resolve(0);
-            temp.src = url;
-          });
-        }));
-
-        totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
-        play();
+        // We can skip calculating durations if the playlist consists of a single HLS stream
+        // For a playlist of multiple files, this is necessary.
+        // Assuming it's a single HLS stream for a live channel, we can simplify this.
+        // Let's assume for a live channel, the playlist.json has a single HLS URL.
+        // If it's multiple files, the original duration calculation is still needed.
+        
+        hasPlaylistLoaded = true;
 
       } catch (err) {
         console.error("Playlist load error:", err);
       }
     }
 
+    // Main play function
+    function playVideo() {
+        if (!playlist || playlist.length === 0) {
+            return;
+        }
+        
+        const url = playlist[0]; // Assuming playlist.json contains a single URL
+
+        if (hlsInstance) {
+            hlsInstance.destroy();
+            hlsInstance = null;
+        }
+
+        if (Hls.isSupported()) {
+            hlsInstance = new Hls();
+            hlsInstance.loadSource(url);
+            hlsInstance.attachMedia(video);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(console.error);
+            });
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                console.error("HLS fatal error:", data);
+                if (data.fatal) {
+                    playNative(url);
+                }
+            });
+        } else {
+            playNative(url);
+        }
+    }
+    
+    // Native playback fallback function
+    function playNative(url) {
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.onloadedmetadata = () => {
+                video.play().catch(console.error);
+            };
+        } else {
+            console.error("This browser does not support HLS streaming.");
+            showLoading(true);
+        }
+    }
+
+    // This function is still useful for a multi-file playlist but might be simplified
+    // if the playlist contains a single, continuously updated HLS stream.
     function getPlaybackPosition() {
       const now = Date.now() / 1000 % totalPlaylistDuration;
       let offset = 0;
@@ -352,59 +410,8 @@
       return { index: 0, time: 0 };
     }
 
-    function play() {
-      const { index, time } = getPlaybackPosition();
-      const url = playlist[index];
-      
-      // Destroy any existing Hls instance to avoid conflicts
-      if (hlsInstance) {
-          hlsInstance.destroy();
-          hlsInstance = null;
-      }
-      
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls();
-        hlsInstance.attachMedia(video);
-        hlsInstance.loadSource(url);
-        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            console.error("HLS fatal error:", data);
-            // Fallback to native player if HLS fails
-            video.src = url;
-            video.onloadedmetadata = () => {
-                video.currentTime = time;
-                video.play().catch(console.error);
-            };
-            video.onerror = () => showLoading(true);
-          }
-        });
-        
-        video.onloadedmetadata = () => {
-            video.currentTime = time;
-            if (hasUserInteracted) {
-                video.play().catch(console.error);
-            }
-        };
-
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS support (e.g., Safari, older Edge)
-        video.src = url;
-        video.onloadedmetadata = () => {
-            video.currentTime = time;
-            if (hasUserInteracted) {
-                video.play().catch(console.error);
-            }
-        };
-        video.onerror = () => showLoading(true);
-
-      } else {
-        // Fallback for other browsers that don't support HLS
-        console.error("This browser does not support HLS streaming.");
-        showLoading(true);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', initializePlayer);
+    // Initialize the playlist on page load
+    document.addEventListener('DOMContentLoaded', initializePlaylist);
   </script>
 </body>
 </html>

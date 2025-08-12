@@ -27,12 +27,28 @@
             margin-top: 0;
             margin-bottom: 1em;
         }
-        #videoPlayer { 
+        #videoContainer {
+            position: relative;
             width: 90%; 
             max-width: 1280px; 
             border: 2px solid #333;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
             background-color: black;
+        }
+        #videoPlayer { 
+            width: 100%;
+        }
+        #muteToggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 1.5em;
+            padding: 5px 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
         }
         @media (max-width: 768px) {
             h1 {
@@ -48,77 +64,117 @@
     <h1>MSTV Network</h1>
     <p>Broadcasting live, 24/7 (simulated)</p>
     
-    <video id="videoPlayer" controls autoplay muted></video>
+    <div id="videoContainer">
+        <video id="videoPlayer" autoplay muted></video>
+        <span id="muteToggle">🔈</span>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
     
     <script>
-        // Get the video element.
+        // Get the video element and mute toggle button.
         const video = document.getElementById('videoPlayer');
+        const muteToggle = document.getElementById('muteToggle');
 
-        // Function to fetch the playlist and start playback.
+        // Check for saved mute state from previous session.
+        const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
+        if (isUnmuted) {
+            video.muted = false;
+            muteToggle.textContent = '🔊';
+        }
+
+        // Toggle mute state and save it to local storage.
+        muteToggle.addEventListener('click', () => {
+            video.muted = !video.muted;
+            localStorage.setItem('isUnmuted', !video.muted);
+            muteToggle.textContent = video.muted ? '🔈' : '🔊';
+        });
+
         async function initializePlayer() {
-            console.log("Initializing player...");
             try {
-                // Fetch the playlist.json file from the same repository.
                 const response = await fetch('playlist.json');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const playlist = await response.json();
 
-                // Check if the playlist is valid and not empty.
                 if (!Array.isArray(playlist) || playlist.length === 0) {
                     console.error("Playlist is empty or invalid.");
                     return;
                 }
 
-                let currentVideoIndex = 0;
                 let hls;
+                let currentVideoDuration = 0;
+                let videoIndex = 0;
 
-                function playNextVideo() {
-                    if (currentVideoIndex >= playlist.length) {
-                        console.log("End of playlist. Looping back to the beginning.");
-                        currentVideoIndex = 0; // Loop back to the start.
-                    }
-
-                    const videoUrl = playlist[currentVideoIndex];
+                // Function to play a specific video from the playlist.
+                function playVideo(index, startTime = 0) {
+                    videoIndex = index;
+                    const videoUrl = playlist[videoIndex];
                     console.log(`Now playing: ${videoUrl}`);
 
                     if (Hls.isSupported()) {
                         if (!hls) {
                             hls = new Hls();
                             hls.attachMedia(video);
-                            
-                            hls.on(Hls.Events.ERROR, function (event, data) {
+                            hls.on(Hls.Events.ERROR, (event, data) => {
                                 if (data.fatal) {
                                     console.error("HLS fatal error:", data.details);
-                                    // On a fatal error, try the next video.
                                     playNextVideo();
                                 }
                             });
                         }
+                        
                         hls.loadSource(videoUrl);
-                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                        // Fallback for native HLS support (Safari).
-                        video.src = videoUrl;
-                    }
 
-                    currentVideoIndex++;
+                        video.onloadedmetadata = () => {
+                            video.currentTime = startTime;
+                            currentVideoDuration = video.duration;
+                        };
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = videoUrl;
+                        video.onloadedmetadata = () => {
+                            video.currentTime = startTime;
+                            currentVideoDuration = video.duration;
+                        };
+                    }
+                }
+                
+                // Function to move to the next video in the playlist.
+                function playNextVideo() {
+                    const nextIndex = (videoIndex + 1) % playlist.length;
+                    playVideo(nextIndex, 0); // Start the next video from the beginning.
                 }
 
-                // Add event listener for when a video ends.
+                // Check for a saved state (for reloading).
+                const savedState = localStorage.getItem('liveStreamState');
+                let savedIndex = 0;
+                let savedTime = 0;
+
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    savedIndex = state.index;
+                    savedTime = state.time;
+                }
+
+                // Initial playback based on saved state or time of day.
+                playVideo(savedIndex, savedTime);
+
+                // Use the video's 'timeupdate' event to save the state.
+                video.addEventListener('timeupdate', () => {
+                    localStorage.setItem('liveStreamState', JSON.stringify({
+                        index: videoIndex,
+                        time: video.currentTime
+                    }));
+                });
+
                 video.addEventListener('ended', playNextVideo);
-                
-                // Start the process by playing the first video.
-                playNextVideo();
 
             } catch (error) {
                 console.error("Failed to load or parse playlist.json:", error);
             }
         }
-
-        // Initialize the player when the DOM is ready.
+        
         document.addEventListener('DOMContentLoaded', initializePlayer);
     </script>
 </body>

@@ -6,12 +6,8 @@
       "duration": 600
     },
     {
-      "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
+      "url": "https://eqz0nz1hz2.guardstorage.net/hls_3/lp8avrA-o3IDgJGQWUJOUjb839KASVl7cBKHjTJPAuWzizZgGBM4bugb7Aue68BmFzvKqEAVTkJUbHJDLBlhkw/master.m3u8?sig=WmyEboVoaDUP0toIFCTRHA&expires=1754986093",
       "duration": 900
-    },
-    {
-      "url": "https://mojen.secdn.net/ghls/nick-int/Nick-int/index.m3u8",
-      "duration": 1200
     }
   ]
 }

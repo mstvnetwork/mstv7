@@ -63,7 +63,7 @@
             cursor: pointer;
             z-index: 11;
             border: 2px solid white;
-            display: none; /* Initially hidden */
+            display: block; /* Always visible when the video is paused */
         }
         @media (max-width: 768px) {
             h1 {
@@ -111,16 +111,26 @@
             }
         });
         
-        video.addEventListener('play', () => {
-            playButton.style.display = 'none';
-        });
+        // This is the key change: a single function to manage the play button's visibility
+        function updatePlayButton() {
+            if (video.paused) {
+                playButton.style.display = 'block';
+            } else {
+                playButton.style.display = 'none';
+            }
+        }
 
-        video.addEventListener('pause', () => {
-            playButton.style.display = 'block';
-        });
+        video.addEventListener('play', updatePlayButton);
+        video.addEventListener('pause', updatePlayButton);
+        video.addEventListener('loadeddata', updatePlayButton);
+        video.addEventListener('error', updatePlayButton);
 
         playButton.addEventListener('click', () => {
-            video.play().catch(e => console.error("Could not play video:", e));
+            video.play().catch(e => {
+                console.error("Could not play video:", e);
+                // On error, the button remains visible so the user can try again
+                updatePlayButton();
+            });
         });
 
         async function initializePlayer() {
@@ -160,8 +170,10 @@
                     });
                 }
                 
+                // Call play() to start the process on initial page load
                 play();
                 
+                // Re-sync every minute to keep playback accurate
                 setInterval(play, 60000);
 
             } catch (error) {
@@ -211,6 +223,9 @@
                     video.oncanplay = null;
                 };
             }
+            
+            // Check video state after a short delay to ensure the play button is updated
+            setTimeout(updatePlayButton, 500);
         }
         
         document.addEventListener('DOMContentLoaded', initializePlayer);

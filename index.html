@@ -2,91 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MSTV Live</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MSTV7 – Live TV</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: black;
-      overflow: hidden;
-      height: 100%;
-    }
-
-    #player {
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      background-color: black;
-      pointer-events: none;
-    }
-
+    html, body { margin:0; padding:0; height:100%; background:black; overflow:hidden; }
+    #player { width:100vw; height:100vh; object-fit:cover; background:black; pointer-events:none; }
     #overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.85);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      z-index: 1000;
-      cursor: pointer;
+      position:fixed; top:0; left:0; width:100vw; height:100vh;
+      background:rgba(0,0,0,0.85); color:white; display:flex;
+      align-items:center; justify-content:center;
+      font-size:2rem; z-index:1000; cursor:pointer;
     }
   </style>
 </head>
 <body>
   <div id="overlay">Click to Start MSTV7</div>
   <video id="player" autoplay muted playsinline></video>
-
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('player');
     const overlay = document.getElementById('overlay');
-    let hls;
-    let playlistData = null;
+    let hls, playlistData;
 
-    // Fetch the playlist JSON
     async function fetchPlaylist() {
-      const res = await fetch('playlist.json');
-      return await res.json();
+      return (await fetch('playlist.json')).json();
     }
 
-    // Calculate the current video + offset
-    function getCurrentVideoSchedule(playlist) {
-      const startTime = new Date(playlist.start_time).getTime();
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000); // in seconds
-
-      const totalDuration = playlist.videos.reduce((sum, vid) => sum + vid.duration, 0);
-      const loopedTime = elapsed % totalDuration;
-
-      let cumulative = 0;
-      for (const video of playlist.videos) {
-        if (loopedTime < cumulative + video.duration) {
-          return {
-            url: video.url,
-            offset: loopedTime - cumulative
-          };
+    function getCurrentVideoSchedule(pl) {
+      const startTime = new Date(pl.start_time).getTime();
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const total = pl.videos.reduce((sum, v) => sum + v.duration, 0);
+      const loop = elapsed % total;
+      let cum = 0;
+      for (const vid of pl.videos) {
+        if (loop < cum + vid.duration) {
+          return { url: vid.url, offset: loop - cum };
         }
-        cumulative += video.duration;
+        cum += vid.duration;
       }
     }
 
-    // Load the HLS video at the right offset
     function loadVideo({ url, offset }) {
       if (hls) hls.destroy();
-
-      hls = new Hls({
-        maxFragLookupTolerance: 0,
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90
-      });
-
+      hls = new Hls({ maxFragLookupTolerance:0, enableWorker:true, lowLatencyMode:true });
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
@@ -95,51 +53,40 @@
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.currentTime = offset;
-        video.play().catch(err => console.error("Autoplay blocked:", err));
       });
 
-      // Block user control
+      // Try playback at multiple stages:
+      hls.on(Hls.Events.MANIFEST_PARSED, () => attemptPlay());
+      video.addEventListener('canplaythrough', attemptPlay);
+
       video.controls = false;
       video.muted = true;
-
-      video.addEventListener('seeking', () => {
-        video.currentTime = offset;
-      });
-
-      video.addEventListener('pause', () => {
-        video.play().catch(() => {});
-      });
-
-      video.addEventListener('volumechange', () => {
-        video.muted = true;
-      });
+      video.addEventListener('seeking', () => video.currentTime = offset);
+      video.addEventListener('pause', () => attemptPlay());
+      video.addEventListener('volumechange', () => video.muted = true);
     }
 
-    // Force fullscreen
+    function attemptPlay() {
+      const playPromise = video.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(err => console.error('Playback error:', err));
+      }
+    }
+
     function enterFullscreen() {
       const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+      el.requestFullscreen?.() || el.webkitRequestFullscreen?.() || el.msRequestFullscreen?.();
     }
 
-    // Full player boot logic
     async function startPlayback() {
       overlay.style.display = 'none';
       enterFullscreen();
-
       playlistData = await fetchPlaylist();
-      const schedule = getCurrentVideoSchedule(playlistData);
-      loadVideo(schedule);
-
+      loadVideo(getCurrentVideoSchedule(playlistData));
       // Resync every 5 minutes
-      setInterval(() => {
-        const schedule = getCurrentVideoSchedule(playlistData);
-        loadVideo(schedule);
-      }, 5 * 60 * 1000);
+      setInterval(() => loadVideo(getCurrentVideoSchedule(playlistData)), 5 * 60 * 1000);
     }
 
-    // Wait for user interaction
     overlay.addEventListener('click', startPlayback);
   </script>
 </body>

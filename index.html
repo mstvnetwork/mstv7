@@ -95,8 +95,7 @@
         let videoDurations = [];
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
-        let isSeeking = false;
-        let currentVideoIndex = -1; // Track the current video to prevent reloads
+        let currentVideoIndex = -1;
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -112,13 +111,9 @@
                  video.play().catch(e => console.log('Autoplay was prevented:', e));
             }
         });
-        
+
         function updatePlayButton() {
-            if (video.paused) {
-                playButton.style.display = 'block';
-            } else {
-                playButton.style.display = 'none';
-            }
+            playButton.style.display = video.paused ? 'block' : 'none';
         }
 
         video.addEventListener('play', updatePlayButton);
@@ -126,38 +121,16 @@
         video.addEventListener('loadeddata', updatePlayButton);
         video.addEventListener('error', updatePlayButton);
 
-        // New, lightweight function to resume playback without reloading the source
-        function resumePlayback() {
-            const position = getPlaybackPosition();
-            const { index, time } = position;
-            
-            // Only set currentTime if we are on the same video
-            if (index === currentVideoIndex) {
-                 video.currentTime = time;
-                 video.play().catch(e => console.log('Autoplay was prevented:', e));
-                 console.log(`Playback resumed at correct live position: ${time.toFixed(2)}s`);
-            } else {
-                // If the video has changed, trigger a full play() to load the new source
-                play();
-            }
-        }
-
-        playButton.addEventListener('click', resumePlayback);
-
-        video.addEventListener('seeking', () => {
-            isSeeking = true;
-            console.log('Seeking detected. Forcing video back to live position.');
+        playButton.addEventListener('click', () => {
+            // Trigger the single source of truth for playback
+            play(true); 
         });
 
-        video.addEventListener('seeked', () => {
-            if (isSeeking) {
-                const position = getPlaybackPosition();
-                if (video.currentTime !== position.time) {
-                    video.currentTime = position.time;
-                    console.log('Seek attempt reverted. Current time reset to live position.');
-                }
-                isSeeking = false;
-            }
+        // Event listener for video ending to load the next video
+        video.addEventListener('ended', () => {
+            console.log("Video ended. Playing next video in playlist.");
+            currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
+            playVideoAtIndex(currentVideoIndex);
         });
 
         async function initializePlayer() {
@@ -173,16 +146,9 @@
                     return;
                 }
 
-                videoDurations = await Promise.all(playlist.map(url => {
-                    return new Promise((resolve) => {
-                        const tempVideo = document.createElement('video');
-                        tempVideo.onloadedmetadata = () => resolve(tempVideo.duration);
-                        tempVideo.onerror = () => resolve(0);
-                        tempVideo.src = url;
-                    });
-                }));
-
-                totalPlaylistDuration = videoDurations.reduce((acc, curr) => acc + curr, 0);
+                // This code is removed as we now rely on 'ended' event
+                // videoDurations = await Promise.all(playlist.map(...));
+                // totalPlaylistDuration = videoDurations.reduce(...);
 
                 if (Hls.isSupported()) {
                     hlsInstance = new Hls();
@@ -192,75 +158,76 @@
                             console.error("HLS fatal error:", data.details);
                             hlsInstance.destroy();
                             hlsInstance = null;
-                            play();
+                            // Attempt to re-initialize to recover
+                            initializePlayer();
                         }
                     });
                 }
                 
-                play();
-                
-                setInterval(play, 60000);
+                // On initial load, synchronize the player with the correct video.
+                // The 'play' button will handle starting playback.
+                play(false);
 
             } catch (error) {
                 console.error("Failed to load or parse playlist.json:", error);
             }
         }
-
-        function getPlaybackPosition() {
-            const nowInUTC = Date.now();
-            const elapsedSeconds = (nowInUTC / 1000) % totalPlaylistDuration;
-            
-            let currentOffset = 0;
-            for (let i = 0; i < videoDurations.length; i++) {
-                const duration = videoDurations[i];
-                if (elapsedSeconds < currentOffset + duration) {
-                    return { index: i, time: elapsedSeconds - currentOffset };
-                }
-                currentOffset += duration;
-            }
-            return { index: 0, time: 0 };
-        }
-
-        function play() {
-            const position = getPlaybackPosition();
-            const { index, time } = position;
-            const videoUrl = playlist[index];
-            
-            console.log(`Now playing: ${videoUrl} at position: ${time.toFixed(2)}s`);
-
-            // Check if we need to load a new video source
-            if (index !== currentVideoIndex) {
-                 if (hlsInstance) {
-                    if (!hlsInstance.media) {
-                        hlsInstance.attachMedia(video);
-                    }
-                    hlsInstance.loadSource(videoUrl);
-                    
-                    video.oncanplay = () => {
-                        video.currentTime = time;
-                        video.play().catch(e => console.log('Autoplay was prevented:', e));
-                        video.oncanplay = null;
-                        currentVideoIndex = index; // Update index only after successful load
-                    };
-    
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = videoUrl;
-                    video.oncanplay = () => {
-                        video.currentTime = time;
-                        video.play().catch(e => console.log('Autoplay was prevented:', e));
-                        video.oncanplay = null;
-                        currentVideoIndex = index;
-                    };
-                }
-            } else {
-                // If it's the same video, just ensure it's playing and correctly timed
-                video.currentTime = time;
-                video.play().catch(e => console.log('Autoplay was prevented:', e));
-            }
-            
-            setTimeout(updatePlayButton, 500);
-        }
         
+        // This function calculates which video to play and at what time.
+        // It's now only called on initial load and when explicitly needed.
+        function play(shouldPlay = false) {
+            const nowInUTC = Date.now();
+            
+            // To get accurate position, we'd need video durations again.
+            // A more robust, but complex, approach would be to calculate a "pseudo" duration.
+            // For simplicity and to fix jitter, we will assume a constant length for each.
+            const averageDuration = 1800; // Assuming 30-minute videos
+            totalPlaylistDuration = playlist.length * averageDuration;
+            const elapsedSeconds = (nowInUTC / 1000) % totalPlaylistDuration;
+
+            let currentOffset = 0;
+            let videoToPlayIndex = 0;
+            let startTime = 0;
+
+            for (let i = 0; i < playlist.length; i++) {
+                 const duration = averageDuration;
+                 if (elapsedSeconds < currentOffset + duration) {
+                    videoToPlayIndex = i;
+                    startTime = elapsedSeconds - currentOffset;
+                    break;
+                 }
+                 currentOffset += duration;
+            }
+
+            console.log(`Synchronized to live. Video Index: ${videoToPlayIndex}, Time: ${startTime.toFixed(2)}s`);
+
+            // Now, load and play the video.
+            playVideoAtIndex(videoToPlayIndex, startTime, shouldPlay);
+        }
+
+        function playVideoAtIndex(index, startTime = 0, shouldPlay = true) {
+            const videoUrl = playlist[index];
+            currentVideoIndex = index;
+            
+            if (hlsInstance) {
+                hlsInstance.loadSource(videoUrl);
+                video.onloadedmetadata = () => {
+                    video.currentTime = startTime;
+                    if (shouldPlay) {
+                        video.play().catch(e => console.log('Autoplay was prevented:', e));
+                    }
+                };
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoUrl;
+                video.onloadedmetadata = () => {
+                    video.currentTime = startTime;
+                    if (shouldPlay) {
+                        video.play().catch(e => console.log('Autoplay was prevented:', e));
+                    }
+                };
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', initializePlayer);
     </script>
 </body>

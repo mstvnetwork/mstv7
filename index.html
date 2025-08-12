@@ -96,6 +96,7 @@
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
         let isSeeking = false;
+        let currentVideoIndex = -1; // Track the current video to prevent reloads
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -125,13 +126,23 @@
         video.addEventListener('loadeddata', updatePlayButton);
         video.addEventListener('error', updatePlayButton);
 
-        // --- KEY CHANGE IS HERE ---
-        // Clicking the play button now calls the main `play()` function
-        // to re-synchronize the video, not just resume playback.
-        playButton.addEventListener('click', () => {
-            play();
-        });
-        // --- END OF KEY CHANGE ---
+        // New, lightweight function to resume playback without reloading the source
+        function resumePlayback() {
+            const position = getPlaybackPosition();
+            const { index, time } = position;
+            
+            // Only set currentTime if we are on the same video
+            if (index === currentVideoIndex) {
+                 video.currentTime = time;
+                 video.play().catch(e => console.log('Autoplay was prevented:', e));
+                 console.log(`Playback resumed at correct live position: ${time.toFixed(2)}s`);
+            } else {
+                // If the video has changed, trigger a full play() to load the new source
+                play();
+            }
+        }
+
+        playButton.addEventListener('click', resumePlayback);
 
         video.addEventListener('seeking', () => {
             isSeeking = true;
@@ -217,25 +228,34 @@
             
             console.log(`Now playing: ${videoUrl} at position: ${time.toFixed(2)}s`);
 
-            if (hlsInstance) {
-                if (!hlsInstance.media) {
-                    hlsInstance.attachMedia(video);
+            // Check if we need to load a new video source
+            if (index !== currentVideoIndex) {
+                 if (hlsInstance) {
+                    if (!hlsInstance.media) {
+                        hlsInstance.attachMedia(video);
+                    }
+                    hlsInstance.loadSource(videoUrl);
+                    
+                    video.oncanplay = () => {
+                        video.currentTime = time;
+                        video.play().catch(e => console.log('Autoplay was prevented:', e));
+                        video.oncanplay = null;
+                        currentVideoIndex = index; // Update index only after successful load
+                    };
+    
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    video.oncanplay = () => {
+                        video.currentTime = time;
+                        video.play().catch(e => console.log('Autoplay was prevented:', e));
+                        video.oncanplay = null;
+                        currentVideoIndex = index;
+                    };
                 }
-                hlsInstance.loadSource(videoUrl);
-                
-                video.oncanplay = () => {
-                    video.currentTime = time;
-                    video.play().catch(e => console.log('Autoplay was prevented:', e));
-                    video.oncanplay = null;
-                };
-
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = videoUrl;
-                video.oncanplay = () => {
-                    video.currentTime = time;
-                    video.play().catch(e => console.log('Autoplay was prevented:', e));
-                    video.oncanplay = null;
-                };
+            } else {
+                // If it's the same video, just ensure it's playing and correctly timed
+                video.currentTime = time;
+                video.play().catch(e => console.log('Autoplay was prevented:', e));
             }
             
             setTimeout(updatePlayButton, 500);

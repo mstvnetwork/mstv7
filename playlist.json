@@ -1,8 +1,18 @@
 {
-  "start_time": "2025-01-01T05:23:00Z",
+  "start_time": "2025-01-01T00:00:00Z",
   "videos": [
-    { "url": "https://eqz0nz1hz2.guardstorage.net/hls_3/lp8avrA-o3IDgJGQWUJOUjb839KASVl7cBKHjTJPAuWzizZgGBM4bugb7Aue68BmFzvKqEAVTkJUbHJDLBlhkw/master.m3u8?sig=R1RTz41k4DIpf57DTUVD1w&expires=1754986041", "duration": 600 },
-    { "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8", "duration": 900 },
-    { "url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8", "duration": 1200 }
+    {
+      "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      "duration": 600
+    },
+    {
+      "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
+      "duration": 900
+    },
+    {
+      "url": "https://mojen.secdn.net/ghls/nick-int/Nick-int/index.m3u8",
+      "duration": 1200
+    }
   ]
 }
+

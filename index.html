@@ -1,41 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<!-- CRITICAL: user-scalable=no is the most reliable way to prevent native browser UI from showing on tap/pinch -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta http-equiv="X-UA-Compatible" content="ie=edge" />
-<meta name="description" content="MSTV Network offers a variety of live TV channels including music, movies, and more. Watch your favorite channels online for free." />
-<meta name="keywords" content="live TV, MSTV Network, free TV, live channels, streaming, music, bollywood, saga music" />
-<meta name="robots" content="index, follow" />
-<meta property="og:title" content="MSTV Network" />
-<meta property="og:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
-<meta property="og:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
-<meta property="og:url" content="https://mstvnet.netlify.app/" />
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="MSTV Network" />
-<meta name="twitter:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
-<meta name="twitter:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
-<meta name="twitter:url" content="https://mstvnet.netlify.app/" />
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": "MSTV Network",
-  "description": "Stream live TV channels including music, movies, and more.",
-  "url": "https://mstvnet.netlify.app",
-  "publisher": {
-    "@type": "Organization",
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <meta name="description" content="MSTV Network offers a variety of live TV channels including music, movies, and more. Watch your favorite channels online for free." />
+  <meta name="keywords" content="live TV, MSTV Network, free TV, live channels, streaming, music, bollywood, saga music" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="MSTV Network" />
+  <meta property="og:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
+  <meta property="og:url" content="https://mstvnet.netlify.app/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="MSTV Network" />
+  <meta name="twitter:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
+  <meta name="twitter:url" content="https://mstvnet.netlify.app/" />
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
     "name": "MSTV Network",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png"
+    "description": "Stream live TV channels including music, movies, and more.",
+    "url": "https://mstvnet.netlify.app",
+    "publisher": {
+      "@type": "Organization",
+      "name": "MSTV Network",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png"
+      }
     }
   }
-}
-</script>
+  </script>
+  
   <title>MSTV Network</title>
+  
   <style>
     body {
       background-color: #1a1a1a;
@@ -190,7 +191,7 @@
 
     .social a {
       text-decoration: none;
-      color: #1e90ff;
+      color: #FFD700; /* Golden Yellow */
       font-size: 1.2em;
     }
 
@@ -205,6 +206,16 @@
       padding: 20px 10px;
       text-align: center;
       font-size: 0.9em;
+    }
+
+    /* Neon Color for Play Button */
+    #playButton {
+      color: #39FF14; /* Neon Green */
+      transition: color 0.2s ease;
+    }
+
+    #playButton.clicked {
+      display: none;
     }
 
     @media (max-width: 768px) {
@@ -223,18 +234,19 @@
 <body>
 
   <!-- Title -->
-  <header>MSTV Network</header>
+  <header>MSTV NETWORK</header>
 
   <!-- Scrolling Text -->
   <div class="scrolling-text">
     <p>Welcome to MSTV Network — Streaming Live 24/7 — Stay Tuned for Exclusive Content and Updates!</p>
   </div>
- <!-- Video Player -->
+  
+  <!-- Video Player -->
   <div id="videoContainer">
     <video id="videoPlayer" autoplay muted></video>
     <span id="muteToggle">🔈</span>
     <div id="liveStamp">LIVE</div>
-    <div id="playButton">Click watch live</div>
+    <div id="playButton">CLICK TO▶️▶️ WATCH LIVE</div>
     <div id="loadingOverlay">
       <div class="spinner"></div>
       <div>Loading...</div>
@@ -248,6 +260,18 @@
     </a>
   </div>
 
+  <!-- Image Grid -->
+  <div class="image-grid">
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" alt="Channel Image 1" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" alt="Channel Image 2" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.png" alt="Channel Image 3" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(4).jpeg" alt="Channel Image 4" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/live-sports-plus-hd-otk-logo.webp" alt="Channel Image 5" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/81GCH6UU7qL.png" alt="Channel Image 6" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(2).jpeg" alt="Channel Image 7" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(1).png" alt="Channel Image 8" />
+  </div>
+
   <!-- Footer -->
   <footer>
     <div>About Us: MSTV is your trusted source for streaming content 24/7.</div>
@@ -255,7 +279,8 @@
   </footer>
   <!-- GoatCounter analytics -->
 <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-
+<script>
+  
   <!-- Video Logic -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
   <script>
@@ -311,6 +336,7 @@
         console.error("Could not play video:", e);
         updatePlayButton();
       });
+      playButton.classList.add('clicked'); // Hide play button after clicked
     });
 
     video.addEventListener('seeking', () => {

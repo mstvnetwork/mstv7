@@ -1,93 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MSTV7 – Live TV</title>
-  <style>
-    html, body { margin:0; padding:0; height:100%; background:black; overflow:hidden; }
-    #player { width:100vw; height:100vh; object-fit:cover; background:black; pointer-events:none; }
-    #overlay {
-      position:fixed; top:0; left:0; width:100vw; height:100vh;
-      background:rgba(0,0,0,0.85); color:white; display:flex;
-      align-items:center; justify-content:center;
-      font-size:2rem; z-index:1000; cursor:pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSTV Network</title>
+    <style>
+        body { 
+            background-color: #1a1a1a; 
+            color: white; 
+            font-family: sans-serif; 
+            text-align: center; 
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 0.2em;
+        }
+        p {
+            font-size: 1.2em;
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+        #videoPlayer { 
+            width: 90%; 
+            max-width: 1280px; 
+            border: 2px solid #333;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            background-color: black;
+        }
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            p {
+                font-size: 1em;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div id="overlay">Click to Start MSTV7</div>
-  <video id="player" autoplay muted playsinline></video>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script>
-    const video = document.getElementById('player');
-    const overlay = document.getElementById('overlay');
-    let hls, playlistData;
+    <h1>MSTV Network</h1>
+    <p>Broadcasting live, 24/7 (simulated)</p>
+    
+    <video id="videoPlayer" controls autoplay muted></video>
 
-    async function fetchPlaylist() {
-      return (await fetch('playlist.json')).json();
-    }
-
-    function getCurrentVideoSchedule(pl) {
-      const startTime = new Date(pl.start_time).getTime();
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const total = pl.videos.reduce((sum, v) => sum + v.duration, 0);
-      const loop = elapsed % total;
-      let cum = 0;
-      for (const vid of pl.videos) {
-        if (loop < cum + vid.duration) {
-          return { url: vid.url, offset: loop - cum };
-        }
-        cum += vid.duration;
-      }
-    }
-
-    function loadVideo({ url, offset }) {
-      if (hls) hls.destroy();
-      hls = new Hls({ maxFragLookupTolerance:0, enableWorker:true, lowLatencyMode:true });
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        hls.loadSource(url);
-      });
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.currentTime = offset;
-      });
-
-      // Try playback at multiple stages:
-      hls.on(Hls.Events.MANIFEST_PARSED, () => attemptPlay());
-      video.addEventListener('canplaythrough', attemptPlay);
-
-      video.controls = false;
-      video.muted = true;
-      video.addEventListener('seeking', () => video.currentTime = offset);
-      video.addEventListener('pause', () => attemptPlay());
-      video.addEventListener('volumechange', () => video.muted = true);
-    }
-
-    function attemptPlay() {
-      const playPromise = video.play();
-      if (playPromise && playPromise.catch) {
-        playPromise.catch(err => console.error('Playback error:', err));
-      }
-    }
-
-    function enterFullscreen() {
-      const el = document.documentElement;
-      el.requestFullscreen?.() || el.webkitRequestFullscreen?.() || el.msRequestFullscreen?.();
-    }
-
-    async function startPlayback() {
-      overlay.style.display = 'none';
-      enterFullscreen();
-      playlistData = await fetchPlaylist();
-      loadVideo(getCurrentVideoSchedule(playlistData));
-      // Resync every 5 minutes
-      setInterval(() => loadVideo(getCurrentVideoSchedule(playlistData)), 5 * 60 * 1000);
-    }
-
-    overlay.addEventListener('click', startPlayback);
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+    
+    <script src="script.js"></script>
 </body>
 </html>

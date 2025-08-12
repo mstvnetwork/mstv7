@@ -78,6 +78,7 @@
         let videoDurations = [];
         let totalPlaylistDuration = 0;
         let hlsInstance = null;
+        let isVideoReadyToPlay = false;
 
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
@@ -89,6 +90,10 @@
             video.muted = !video.muted;
             localStorage.setItem('isUnmuted', !video.muted);
             muteToggle.textContent = video.muted ? '🔈' : '🔊';
+            // Attempt to play immediately after unmuting
+            if (!video.paused) {
+                 video.play().catch(e => console.log('Autoplay was prevented:', e));
+            }
         });
 
         async function initializePlayer() {
@@ -159,8 +164,13 @@
             
             console.log(`Now playing: ${videoUrl} at position: ${time.toFixed(2)}s`);
 
+            // This flag helps prevent multiple play() calls
+            if (isVideoReadyToPlay) {
+                video.pause();
+                isVideoReadyToPlay = false;
+            }
+
             if (hlsInstance) {
-                // Ensure HLS instance is attached before loading source
                 if (!hlsInstance.media) {
                     hlsInstance.attachMedia(video);
                 }
@@ -169,8 +179,8 @@
                 video.oncanplay = () => {
                     video.currentTime = time;
                     video.play().catch(e => console.log('Autoplay was prevented:', e));
-                    // Remove the event listener after it's used
-                    video.oncanplay = null; 
+                    video.oncanplay = null;
+                    isVideoReadyToPlay = true;
                 };
 
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -179,6 +189,7 @@
                     video.currentTime = time;
                     video.play().catch(e => console.log('Autoplay was prevented:', e));
                     video.oncanplay = null;
+                    isVideoReadyToPlay = true;
                 };
             }
         }

@@ -75,15 +75,16 @@
         // Get the video element and mute toggle button.
         const video = document.getElementById('videoPlayer');
         const muteToggle = document.getElementById('muteToggle');
+        let playlist = [];
+        let videoDurations = [];
+        let totalPlaylistDuration = 0;
 
-        // Check for saved mute state from previous session.
         const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
         if (isUnmuted) {
             video.muted = false;
             muteToggle.textContent = '🔊';
         }
 
-        // Toggle mute state and save it to local storage.
         muteToggle.addEventListener('click', () => {
             video.muted = !video.muted;
             localStorage.setItem('isUnmuted', !video.muted);
@@ -96,22 +97,52 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const playlist = await response.json();
+                playlist = await response.json();
 
                 if (!Array.isArray(playlist) || playlist.length === 0) {
                     console.error("Playlist is empty or invalid.");
                     return;
                 }
 
-                let hls;
-                let currentVideoDuration = 0;
-                let videoIndex = 0;
+                // First, we need to get the duration of each video.
+                // This simulates a "schedule" of content.
+                videoDurations = await Promise.all(playlist.map(url => {
+                    return new Promise((resolve) => {
+                        const tempVideo = document.createElement('video');
+                        tempVideo.onloadedmetadata = () => resolve(tempVideo.duration);
+                        tempVideo.onerror = () => resolve(0); // Resolve with 0 if an error occurs.
+                        tempVideo.src = url;
+                    });
+                }));
 
-                // Function to play a specific video from the playlist.
-                function playVideo(index, startTime = 0) {
-                    videoIndex = index;
-                    const videoUrl = playlist[videoIndex];
-                    console.log(`Now playing: ${videoUrl}`);
+                totalPlaylistDuration = videoDurations.reduce((acc, curr) => acc + curr, 0);
+
+                let hls;
+
+                function getPlaybackPosition() {
+                    const nowInUTC = Date.now();
+                    const elapsedSeconds = (nowInUTC / 1000) % totalPlaylistDuration;
+                    
+                    let currentOffset = 0;
+                    for (let i = 0; i < videoDurations.length; i++) {
+                        const duration = videoDurations[i];
+                        if (elapsedSeconds < currentOffset + duration) {
+                            return {
+                                index: i,
+                                time: elapsedSeconds - currentOffset
+                            };
+                        }
+                        currentOffset += duration;
+                    }
+                    return { index: 0, time: 0 }; // Fallback to the start.
+                }
+
+                function play() {
+                    const position = getPlaybackPosition();
+                    const { index, time } = position;
+                    const videoUrl = playlist[index];
+                    
+                    console.log(`Now playing: ${videoUrl} at position: ${time.toFixed(2)}s`);
 
                     if (Hls.isSupported()) {
                         if (!hls) {
@@ -120,55 +151,32 @@
                             hls.on(Hls.Events.ERROR, (event, data) => {
                                 if (data.fatal) {
                                     console.error("HLS fatal error:", data.details);
-                                    playNextVideo();
+                                    // With this sync method, we just reload the player
+                                    // instead of moving to the next video.
+                                    // The next play() will re-sync with UTC.
+                                    hls.destroy();
+                                    hls = null;
+                                    play();
                                 }
                             });
                         }
-                        
                         hls.loadSource(videoUrl);
-
                         video.onloadedmetadata = () => {
-                            video.currentTime = startTime;
-                            currentVideoDuration = video.duration;
+                            video.currentTime = time;
                         };
                     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                         video.src = videoUrl;
                         video.onloadedmetadata = () => {
-                            video.currentTime = startTime;
-                            currentVideoDuration = video.duration;
+                            video.currentTime = time;
                         };
                     }
                 }
                 
-                // Function to move to the next video in the playlist.
-                function playNextVideo() {
-                    const nextIndex = (videoIndex + 1) % playlist.length;
-                    playVideo(nextIndex, 0); // Start the next video from the beginning.
-                }
+                // Start playback.
+                play();
 
-                // Check for a saved state (for reloading).
-                const savedState = localStorage.getItem('liveStreamState');
-                let savedIndex = 0;
-                let savedTime = 0;
-
-                if (savedState) {
-                    const state = JSON.parse(savedState);
-                    savedIndex = state.index;
-                    savedTime = state.time;
-                }
-
-                // Initial playback based on saved state or time of day.
-                playVideo(savedIndex, savedTime);
-
-                // Use the video's 'timeupdate' event to save the state.
-                video.addEventListener('timeupdate', () => {
-                    localStorage.setItem('liveStreamState', JSON.stringify({
-                        index: videoIndex,
-                        time: video.currentTime
-                    }));
-                });
-
-                video.addEventListener('ended', playNextVideo);
+                // To simulate a live stream, we need to periodically check and re-sync.
+                setInterval(play, 60000); // Re-sync every minute to account for clock drift.
 
             } catch (error) {
                 console.error("Failed to load or parse playlist.json:", error);

@@ -18,15 +18,18 @@
             align-items: center;
             height: 100vh;
         }
+
         h1 {
             font-size: 2.5em;
             margin-bottom: 0.2em;
         }
+
         p {
             font-size: 1.2em;
             margin-top: 0;
             margin-bottom: 1em;
         }
+
         #videoContainer {
             position: relative;
             width: 90%; 
@@ -35,9 +38,21 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
             background-color: black;
         }
+
         #videoPlayer { 
             width: 100%;
+            pointer-events: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
+
+        /* Hide default browser controls in Safari/Chrome/Samsung */
+        #videoPlayer::-webkit-media-controls {
+            display: none !important;
+        }
+
         #muteToggle {
             position: absolute;
             top: 10px;
@@ -50,6 +65,7 @@
             cursor: pointer;
             z-index: 10;
         }
+
         #playButton {
             position: absolute;
             top: 50%;
@@ -65,6 +81,7 @@
             border: 2px solid white;
             display: block;
         }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8em;
@@ -113,11 +130,7 @@
         });
         
         function updatePlayButton() {
-            if (video.paused) {
-                playButton.style.display = 'block';
-            } else {
-                playButton.style.display = 'none';
-            }
+            playButton.style.display = video.paused ? 'block' : 'none';
         }
 
         video.addEventListener('play', updatePlayButton);
@@ -132,22 +145,30 @@
             });
         });
 
-        // The key part of the workaround: forcing the video back to its live position
+        // Prevent seek attempts
         video.addEventListener('seeking', () => {
             isSeeking = true;
-            console.log('Seeking detected. Forcing video back to live position.');
         });
 
         video.addEventListener('seeked', () => {
             if (isSeeking) {
                 const position = getPlaybackPosition();
-                if (video.currentTime !== position.time) {
+                if (Math.abs(video.currentTime - position.time) > 0.5) {
                     video.currentTime = position.time;
-                    console.log('Seek attempt reverted. Current time reset to live position.');
+                    console.log('Seek attempt reverted.');
                 }
                 isSeeking = false;
             }
         });
+
+        // Fallback: Periodic check to revert any sneak-seeks
+        setInterval(() => {
+            const position = getPlaybackPosition();
+            if (Math.abs(video.currentTime - position.time) > 1) {
+                video.currentTime = position.time;
+                console.log('Seek attempt corrected via interval check.');
+            }
+        }, 5000);
 
         async function initializePlayer() {
             try {
@@ -188,7 +209,7 @@
                 
                 play();
                 
-                setInterval(play, 60000);
+                setInterval(play, 60000); // Refresh every 60s
 
             } catch (error) {
                 console.error("Failed to load or parse playlist.json:", error);

@@ -3,28 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MSTV HLS Stream Test</title>
+  <title>MSTV HLS Cross-Browser Test</title>
 
   <!-- Video.js CSS -->
   <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
 
   <style>
     body {
-      background-color: #000;
+      background-color: #111;
       color: #fff;
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       text-align: center;
-      margin: 0;
       padding: 20px;
     }
 
-    h1 {
-      margin-bottom: 20px;
-    }
-
     #videoContainer {
+      position: relative;
       max-width: 720px;
-      margin: 0 auto;
+      margin: 20px auto;
     }
 
     .video-js {
@@ -35,7 +31,7 @@
 
     #playButton {
       margin-top: 20px;
-      font-size: 1.1em;
+      font-size: 1.2em;
       padding: 10px 20px;
       background-color: #28a745;
       color: white;
@@ -47,7 +43,7 @@
 </head>
 <body>
 
-  <h1>🎥 MSTV Live Stream Test</h1>
+  <h1>MSTV HLS Stream Test</h1>
 
   <div id="videoContainer">
     <video id="videoPlayer"
@@ -63,46 +59,40 @@
     </video>
   </div>
 
-  <button id="playButton">▶️ Click to Start Stream</button>
+  <button id="playButton">▶️ Click to Play Stream</button>
 
-  <!-- Video.js Library -->
+  <!-- Video.js JS -->
   <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
 
   <script>
     const streamUrl = "https://i-cdn-0.deand373use.com/stream2/i-cdn-0/bf48c44ff2964ef3ba8e9c99fd91e01a/MJTMsp1RshGTygnMNRUR2N2MSlnWXZEdMNDZzQWe5MDZzMmdZJTO1R2RWVHZDljekhkSsl1VwYnWtx2cihVT250ROtmTqpEbPRUQ35keBRjT6lUNapWTzoFVNdnTElUNNRVSwklMZhXTqFUP:1755061359:120.19.134.161:59b3fb989d41ba97a327883a69029286bfd298e9b2a926e28e46dd70892c31d3/index.m3u8";
 
-    const playButton = document.getElementById('playButton');
-
-    const player = videojs('videoPlayer', {
+    let player = videojs('videoPlayer', {
       autoplay: false,
       controls: true,
       muted: true,
       techOrder: ['html5'],
       html5: {
-        vhs: {
-          overrideNative: false // Use native HLS on iOS
-        }
+        vhs: { overrideNative: false }
       }
     });
 
-    // For Android browsers or others that need it, override native HLS
+    // For non-iOS browsers (e.g., Chrome Android), override native HLS
     if (!/iP(hone|od|ad)/.test(navigator.platform)) {
       player.ready(() => {
-        try {
-          player.tech({ IWillNotUseThisInPlugins: true }).vhs.overrideNative = true;
-        } catch (e) {
-          console.warn("Override native HLS failed:", e);
-        }
+        player.tech({ IWillNotUseThisInPlugins: true }).vhs.overrideNative = true;
       });
     }
 
-    let hasStarted = false;
+    // Button interaction
+    let hasInteracted = false;
+    const playButton = document.getElementById('playButton');
 
     ['click', 'touchstart'].forEach(eventType => {
       playButton.addEventListener(eventType, () => {
-        if (hasStarted) return;
+        if (hasInteracted) return;
 
-        hasStarted = true;
+        hasInteracted = true;
         playButton.style.display = 'none';
 
         player.src({
@@ -111,12 +101,11 @@
         });
 
         player.play().catch(err => {
-          console.error("Playback error:", err);
-          alert("Video couldn't start. Try refreshing or using a different browser.");
+          console.error("Autoplay/play error:", err);
+          alert("Failed to play the video. Please try again.");
         });
       });
     });
   </script>
-
 </body>
 </html>

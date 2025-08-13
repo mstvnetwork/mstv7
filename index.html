@@ -281,8 +281,11 @@
       // Set the source and wait for it to be loaded before seeking
       player.src(source);
       
+      // Use player.one to ensure the event listener is only triggered once
       player.one('loadedmetadata', () => {
         player.currentTime(time);
+        
+        // Only try to play here after metadata is loaded
         player.play().catch(e => {
           console.error("Video playback failed:", e);
           showLoading(true);
@@ -297,9 +300,9 @@
     // --- Core Player Initialization and Event Handling ---
     function initializeVideoPlayer() {
       player = videojs('videoPlayer', {
-        autoplay: false, // Ensure autoplay is off by default
+        autoplay: false,
         techOrder: ['html5'],
-        muted: true, // Always start muted
+        muted: true, // Crucially, always start muted
         controls: false
       });
       
@@ -323,7 +326,6 @@
           if (hasPlaylistLoaded && playlist.length > 0) {
             setVideoSource();
 
-            // After playback starts, check localStorage to un-mute if preferred
             const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
             if (isUnmuted) {
               player.muted(false);

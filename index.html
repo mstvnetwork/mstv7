@@ -19,9 +19,11 @@
 
   <title>MSTV Network</title>
 
+  <!-- Font Awesome for Facebook Icon -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
   <style>
+    /* Your existing CSS stays unchanged */
     body {
       background-color: #1a1a1a;
       color: white;
@@ -195,54 +197,9 @@
       header { font-size: 1.8em; }
       .scrolling-text p { font-size: 1em; }
     }
-
-    /* Fullscreen overlay for non-Chrome browsers */
-    #chromeOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.95);
-      color: #FFD700;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 40px 20px;
-      font-size: 1.8em;
-      font-weight: bold;
-      z-index: 9999;
-      display: none;
-      pointer-events: all;
-    }
-
-    #chromeOverlay a#downloadChromeBtn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 24px;
-      background-color: #FFD700;
-      color: #000;
-      font-size: 1em;
-      text-decoration: none;
-      border-radius: 6px;
-      transition: background 0.3s ease;
-    }
-
-    #chromeOverlay a#downloadChromeBtn:hover {
-      background-color: #e6c200;
-    }
   </style>
 </head>
 <body>
-
-  <!-- Overlay shown on non-Chrome browsers -->
-  <div id="chromeOverlay">
-    <div>
-      <p>To watch live, please use Google Chrome browser.</p>
-      <a href="https://www.google.com/chrome/" target="_blank" id="downloadChromeBtn">Download Chrome</a>
-    </div>
-  </div>
 
   <header>MSTV NETWORK</header>
 
@@ -268,6 +225,7 @@
   </div>
 
   <div class="image-grid">
+    <!-- Images same as before -->
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" />
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" />
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.png" />
@@ -283,9 +241,11 @@
     <div>&copy; 2025 MSTV Network. All rights reserved.</div>
   </footer>
 
+  <!-- GoatCounter analytics -->
   <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
+  <!-- HLS.js and player script -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
   <script>
     const video = document.getElementById('videoPlayer');
     const muteToggle = document.getElementById('muteToggle');
@@ -316,7 +276,7 @@
     }
 
     playButton.addEventListener('click', () => {
-      playButton.style.display = 'none';
+      playButton.style.display = 'none'; // Hide permanently
       showLoading(true);
       video.play().catch(console.error);
     });
@@ -412,16 +372,6 @@
           video.oncanplay = null;
         };
       }
-    }
-
-    function isChromeBrowser() {
-      const userAgent = navigator.userAgent.toLowerCase();
-      return /chrome/.test(userAgent) && !/edge|edg|opr|opera|brave/.test(userAgent);
-    }
-
-    if (!isChromeBrowser()) {
-      document.getElementById('chromeOverlay').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
     }
 
     document.addEventListener('DOMContentLoaded', initializePlayer);

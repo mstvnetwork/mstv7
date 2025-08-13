@@ -253,12 +253,8 @@
     let totalPlaylistDuration = 0;
 
     // --- Core Live Simulation Logic ---
-
-    // This function calculates the "live" position within the playlist
     function getPlaybackPosition() {
-      // Get the current time in seconds since the Unix epoch
       const now = Math.floor(Date.now() / 1000);
-      // Find the current position within the looping playlist
       const broadcastTime = now % Math.floor(totalPlaylistDuration);
 
       let offset = 0;
@@ -268,10 +264,9 @@
         }
         offset += videoDurations[i];
       }
-      return { index: 0, time: 0 }; // Fallback to the beginning of the playlist
+      return { index: 0, time: 0 };
     }
 
-    // This function sets the video source and seeks to the correct time
     function setVideoSource() {
       if (!hasPlaylistLoaded || playlist.length === 0) return;
 
@@ -280,14 +275,13 @@
 
       const source = {
         src: url,
-        type: 'video/mp4' // Assuming .mp4 files for a playlist
+        type: 'video/mp4'
       };
 
-      // Set the source
+      // Set the source and wait for it to be loaded before seeking
       player.src(source);
-
-      // Once metadata is loaded, seek to the correct time and play
-      player.on('loadedmetadata', () => {
+      
+      player.one('loadedmetadata', () => {
         player.currentTime(time);
         player.play().catch(e => {
           console.error("Video playback failed:", e);
@@ -295,31 +289,29 @@
         });
       });
 
-      // When a video ends, set the next one in the playlist
-      player.on('ended', () => {
+      player.one('ended', () => {
         setVideoSource();
       });
     }
 
     // --- Core Player Initialization and Event Handling ---
-
     function initializeVideoPlayer() {
       player = videojs('videoPlayer', {
-        autoplay: 'muted',
+        autoplay: false, // Ensure autoplay is off by default
         techOrder: ['html5'],
-        muted: true,
-        controls: false // Explicitly disable controls
+        muted: true, // Always start muted
+        controls: false
       });
-
+      
+      const muteToggle = document.getElementById('muteToggle');
       const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
-      player.muted(!isUnmuted);
-      document.getElementById('muteToggle').textContent = isUnmuted ? '🔊' : '🔈';
+      muteToggle.textContent = isUnmuted ? '🔊' : '🔈';
 
-      document.getElementById('muteToggle').addEventListener('click', () => {
+      muteToggle.addEventListener('click', () => {
         const currentMuted = player.muted();
         player.muted(!currentMuted);
         localStorage.setItem('isUnmuted', currentMuted);
-        document.getElementById('muteToggle').textContent = currentMuted ? '🔊' : '🔈';
+        muteToggle.textContent = currentMuted ? '🔊' : '🔈';
       });
 
       document.getElementById('playButton').addEventListener('click', () => {
@@ -327,8 +319,16 @@
           hasUserInteracted = true;
           document.getElementById('playButton').style.display = 'none';
           showLoading(true);
+
           if (hasPlaylistLoaded && playlist.length > 0) {
             setVideoSource();
+
+            // After playback starts, check localStorage to un-mute if preferred
+            const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
+            if (isUnmuted) {
+              player.muted(false);
+              muteToggle.textContent = '🔊';
+            }
           }
         }
       });
@@ -346,15 +346,12 @@
       document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
     }
 
-    // --- Fetch Playlist and Calculate Durations ---
-
     async function fetchPlaylist() {
       try {
         const response = await fetch('playlist.json');
         playlist = await response.json();
 
         if (Array.isArray(playlist) && playlist.length > 0) {
-          // Calculate durations of each video in the playlist
           videoDurations = await Promise.all(playlist.map(url => {
             return new Promise(resolve => {
               const temp = document.createElement('video');
@@ -378,7 +375,6 @@
       }
     }
 
-    // Initial setup on page load
     document.addEventListener('DOMContentLoaded', () => {
       fetchPlaylist().then(initializeVideoPlayer);
     });

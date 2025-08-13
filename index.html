@@ -90,9 +90,10 @@
     /* Video.js player specific styling to match your theme */
     .video-js {
       width: 100%;
+      pointer-events: none; /* Disables all interaction with the video element */
     }
 
-    /* Hide default Video.js controls to use your custom ones */
+    /* Hide all default Video.js controls */
     .vjs-control-bar, .vjs-big-play-button {
       display: none !important;
     }
@@ -251,46 +252,6 @@
     let hasUserInteracted = false;
     let hasPlaylistLoaded = false;
     let playlist = [];
-    let videoDurations = [];
-    let totalPlaylistDuration = 0;
-    
-    // --- Custom Functions to Restore Live Simulation ---
-    function getPlaybackPosition() {
-      const now = Date.now() / 1000 % totalPlaylistDuration;
-      let offset = 0;
-      for (let i = 0; i < videoDurations.length; i++) {
-        if (now < offset + videoDurations[i]) {
-          return { index: i, time: now - offset };
-        }
-        offset += videoDurations[i];
-      }
-      return { index: 0, time: 0 };
-    }
-
-    function setVideoSource() {
-      const { index, time } = getPlaybackPosition();
-      const url = playlist[index];
-      
-      const source = {
-        src: url,
-        type: url.endsWith('.m3u8') ? 'application/x-mpegURL' : 'video/mp4'
-      };
-      
-      // Set the source and seek to the correct position
-      player.src(source);
-      player.on('loadedmetadata', () => {
-        player.currentTime(time);
-        player.play().catch(e => {
-          console.error("Video playback failed:", e);
-          showLoading(true);
-        });
-      });
-      
-      // Handle when a video ends in the playlist
-      player.on('ended', () => {
-        setVideoSource();
-      });
-    }
 
     // --- Core Player Initialization and Event Handling ---
     function initializeVideoPlayer() {
@@ -299,9 +260,9 @@
         autoplay: 'muted',
         techOrder: ['html5'],
         muted: true,
-        controls: false
+        controls: false // Explicitly disable controls
       });
-      
+
       // Load mute state from local storage
       const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
       player.muted(!isUnmuted);
@@ -322,17 +283,36 @@
           document.getElementById('playButton').style.display = 'none';
           showLoading(true);
           if (hasPlaylistLoaded && playlist.length > 0) {
-            setVideoSource();
+            setVideoSource(playlist[0]);
           }
         }
       });
-      
+
       // Attach loading overlay logic
       player.on('waiting', () => showLoading(true));
-      player.on('loadeddata', () => showLoading(false));
       player.on('playing', () => showLoading(false));
       player.on('error', (e) => {
         console.error("Video.js error:", e);
+        showLoading(true);
+      });
+    }
+
+    // Set the video source
+    function setVideoSource(url) {
+      if (!url) {
+        console.error("No HLS stream URL available.");
+        showLoading(true);
+        return;
+      }
+
+      const source = {
+        src: url,
+        type: 'application/x-mpegURL' // HLS MIME type
+      };
+
+      player.src(source);
+      player.play().catch(e => {
+        console.error("Video playback failed:", e);
         showLoading(true);
       });
     }
@@ -342,29 +322,14 @@
       document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
     }
 
-    // Fetch the playlist and calculate durations
+    // Fetch the playlist.json on page load
     async function fetchPlaylist() {
       try {
         const response = await fetch('playlist.json');
         playlist = await response.json();
         
         if (Array.isArray(playlist) && playlist.length > 0) {
-          // If the playlist is a single HLS stream, we can skip duration calculation
-          if (playlist.length === 1 && playlist[0].endsWith('.m3u8')) {
-              hasPlaylistLoaded = true;
-          } else {
-              // Your original logic for calculating total duration
-              videoDurations = await Promise.all(playlist.map(url => {
-                return new Promise(resolve => {
-                  const temp = document.createElement('video');
-                  temp.onloadedmetadata = () => resolve(temp.duration);
-                  temp.onerror = () => resolve(0);
-                  temp.src = url;
-                });
-              }));
-              totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
-              hasPlaylistLoaded = true;
-          }
+          hasPlaylistLoaded = true;
         } else {
           console.error("Playlist is empty or invalid.");
           showLoading(true);
@@ -381,4 +346,4 @@
     });
   </script>
 </body>
-</html>
+      </html>

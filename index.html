@@ -109,22 +109,6 @@
       z-index: 10;
     }
 
-    #playButton {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 1.2em;
-      font-weight: bold;
-      color: #39FF14;
-      background: rgba(0, 0, 0, 0.6);
-      border-radius: 8px;
-      padding: 10px 20px;
-      cursor: pointer;
-      z-index: 11;
-      border: 2px solid white;
-    }
-
     #liveStamp {
       position: absolute;
       top: 10px;
@@ -209,9 +193,8 @@
 
   <div id="videoContainer">
     <video id="videoPlayer" autoplay muted playsinline></video>
-    <span id="muteToggle">🔈</span>
+    <span id="muteToggle" title="Toggle Mute">🔈</span>
     <div id="liveStamp">LIVE</div>
-    <div id="playButton">CLICK TO▶️▶️ WATCH LIVE</div>
     <div id="loadingOverlay">
       <div class="spinner"></div>
       <div>Loading...</div>
@@ -225,7 +208,6 @@
   </div>
 
   <div class="image-grid">
-    <!-- Images same as before -->
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" />
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" />
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.png" />
@@ -249,25 +231,47 @@
   <script>
     const video = document.getElementById('videoPlayer');
     const muteToggle = document.getElementById('muteToggle');
-    const playButton = document.getElementById('playButton');
     const loadingOverlay = document.getElementById('loadingOverlay');
 
-    let playlist = [];
-    let videoDurations = [];
-    let totalPlaylistDuration = 0;
-    let hlsInstance = null;
-    let isSeeking = false;
+    const hlsUrl = "https://i-cdn-0.deand373use.com/stream2/i-cdn-0/6ddeb17c170fbd6bb594eb9ac4e2cc2e/MJTMsp1RshGTygnMNRUR2N2MSlnWXZEdMNDZzQWe5MDZzMmdZJTO1R2RWVHZDljekhkSsl1VwYnWtx2cihVT250ROtmTqpEbPRUQ35keBRjT6lUNapWTzoFVNdnTElUNNRVSwklMZhXTqFUP:1755089890:101.119.183.128:59b3fb989d41ba97a327883a69029286bfd298e9b2a926e28e46dd70892c31d3/index.m3u8";
 
-    const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
-    if (isUnmuted) {
-      video.muted = false;
-      muteToggle.textContent = '🔊';
+    // Total duration of your stream in seconds (set accordingly)
+    const videoDuration = 8028; // example: 2 hours 13 minutes
+
+    // Broadcast start time (UTC)
+    const broadcastStartTime = new Date("2025-08-13T00:00:00Z").getTime();
+
+    function getCurrentPlaybackPosition() {
+      const now = Date.now();
+      const elapsed = (now - broadcastStartTime) / 1000; // seconds
+      return elapsed % videoDuration;
+    }
+
+    function syncPlaybackPosition() {
+      const desiredTime = getCurrentPlaybackPosition();
+      const diff = Math.abs(video.currentTime - desiredTime);
+      if (diff > 1) {
+        video.currentTime = desiredTime;
+      }
+    }
+
+    video.addEventListener('seeking', () => {
+      setTimeout(() => {
+        const desiredTime = getCurrentPlaybackPosition();
+        if (Math.abs(video.currentTime - desiredTime) > 0.5) {
+          video.currentTime = desiredTime;
+        }
+      }, 200);
+    });
+
+    function updateMuteIcon() {
+      muteToggle.textContent = video.muted ? '🔈' : '🔊';
+      muteToggle.title = video.muted ? 'Unmute' : 'Mute';
     }
 
     muteToggle.addEventListener('click', () => {
       video.muted = !video.muted;
-      localStorage.setItem('isUnmuted', !video.muted);
-      muteToggle.textContent = video.muted ? '🔈' : '🔊';
+      updateMuteIcon();
       if (!video.paused) video.play().catch(console.log);
     });
 
@@ -275,106 +279,39 @@
       loadingOverlay.style.display = show ? 'flex' : 'none';
     }
 
-    playButton.addEventListener('click', () => {
-      playButton.style.display = 'none'; // Hide permanently
-      showLoading(true);
-      video.play().catch(console.error);
-    });
-
     video.addEventListener('waiting', () => showLoading(true));
-    video.addEventListener('canplay', () => showLoading(false));
     video.addEventListener('playing', () => showLoading(false));
-    video.addEventListener('pause', () => showLoading(true));
-    video.addEventListener('ended', () => showLoading(true));
-    video.addEventListener('error', () => showLoading(true));
 
-    video.addEventListener('seeking', () => isSeeking = true);
-    video.addEventListener('seeked', () => {
-      if (isSeeking) {
-        const pos = getPlaybackPosition();
-        if (Math.abs(video.currentTime - pos.time) > 0.5) {
-          video.currentTime = pos.time;
-        }
-        isSeeking = false;
-      }
-    });
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+      showLoading(true);
 
-    setInterval(() => {
-      const pos = getPlaybackPosition();
-      if (Math.abs(video.currentTime - pos.time) > 1) {
-        video.currentTime = pos.time;
-      }
-    }, 2000);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.currentTime = getCurrentPlaybackPosition();
+        video.play().catch(console.log);
+        updateMuteIcon();
+        showLoading(false);
+      });
 
-    async function initializePlayer() {
-      try {
-        const response = await fetch('playlist.json');
-        playlist = await response.json();
-        if (!Array.isArray(playlist) || playlist.length === 0) return;
+      // Optional: keep video synced every 30 seconds
+      setInterval(syncPlaybackPosition, 30000);
 
-        videoDurations = await Promise.all(playlist.map(url => {
-          return new Promise(resolve => {
-            const temp = document.createElement('video');
-            temp.onloadedmetadata = () => resolve(temp.duration);
-            temp.onerror = () => resolve(0);
-            temp.src = url;
-          });
-        }));
-
-        totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
-
-        if (Hls.isSupported()) {
-          hlsInstance = new Hls();
-          hlsInstance.attachMedia(video);
-          hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              hlsInstance.destroy();
-              hlsInstance = null;
-              play();
-            }
-          });
-        }
-
-        play();
-      } catch (err) {
-        console.error("Playlist load error:", err);
-      }
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error("HLS.js error:", data);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl;
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = getCurrentPlaybackPosition();
+        video.play().catch(console.log);
+        updateMuteIcon();
+      });
+      setInterval(syncPlaybackPosition, 30000);
+    } else {
+      alert('Your browser does not support HLS playback.');
     }
-
-    function getPlaybackPosition() {
-      const now = Date.now() / 1000 % totalPlaylistDuration;
-      let offset = 0;
-      for (let i = 0; i < videoDurations.length; i++) {
-        if (now < offset + videoDurations[i]) {
-          return { index: i, time: now - offset };
-        }
-        offset += videoDurations[i];
-      }
-      return { index: 0, time: 0 };
-    }
-
-    function play() {
-      const { index, time } = getPlaybackPosition();
-      const url = playlist[index];
-
-      if (hlsInstance) {
-        hlsInstance.loadSource(url);
-        video.oncanplay = () => {
-          video.currentTime = time;
-          video.play().catch(console.log);
-          video.oncanplay = null;
-        };
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.oncanplay = () => {
-          video.currentTime = time;
-          video.play().catch(console.log);
-          video.oncanplay = null;
-        };
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', initializePlayer);
   </script>
 </body>
 </html>

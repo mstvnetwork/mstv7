@@ -2,109 +2,376 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MSTV HLS Cross-Browser Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <meta name="description" content="MSTV Network offers a variety of live TV channels including music, movies, and more. Watch your favorite channels online for free." />
+  <meta name="keywords" content="live TV, MSTV Network, free TV, live channels, streaming, music, bollywood, saga music" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="MSTV Network" />
+  <meta property="og:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
+  <meta property="og:url" content="https://mstvnet.netlify.app/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="MSTV Network" />
+  <meta name="twitter:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
+  <meta name="twitter:url" content="https://mstvnet.netlify.app/" />
 
-  <!-- Video.js CSS -->
+  <title>MSTV Network</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
   <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
 
   <style>
     body {
-      background-color: #111;
-      color: #fff;
-      font-family: sans-serif;
+      background-color: #1a1a1a;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
       text-align: center;
+      padding: 20px 10px;
+      background-color: #000;
+      font-size: 2.5em;
+      font-weight: bold;
+      color: #FFD700;
+    }
+
+    .scrolling-text {
+      background: #222;
+      overflow: hidden;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
+
+    .scrolling-text p {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scroll-left 15s linear infinite;
+      font-size: 1.2em;
+      color: #fff;
+    }
+
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
       padding: 20px;
+    }
+
+    .image-grid img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      border: 2px solid #333;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
     }
 
     #videoContainer {
       position: relative;
-      max-width: 720px;
-      margin: 20px auto;
+      width: 90%;
+      max-width: 1280px;
+      margin: 30px auto;
+      border: 2px solid #333;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      background-color: black;
     }
 
+    /* Video.js player specific styling to match your theme */
     .video-js {
       width: 100%;
-      height: auto;
-      border: 2px solid #444;
+      pointer-events: none;
+    }
+
+    /* Hide all default Video.js controls */
+    .vjs-control-bar, .vjs-big-play-button {
+      display: none !important;
+    }
+
+    #muteToggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      font-size: 1.5em;
+      padding: 5px 10px;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 10;
     }
 
     #playButton {
-      margin-top: 20px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       font-size: 1.2em;
+      font-weight: bold;
+      color: #39FF14;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
       padding: 10px 20px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 6px;
       cursor: pointer;
+      z-index: 11;
+      border: 2px solid white;
+    }
+
+    #liveStamp {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: red;
+      color: white;
+      font-weight: bold;
+      padding: 5px 10px;
+      font-size: 0.9em;
+      border-radius: 5px;
+      z-index: 10;
+    }
+
+    #loadingOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #FFD700;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 12;
+      display: none;
+    }
+
+    .spinner {
+      border: 6px solid #333;
+      border-top: 6px solid #FFD700;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .social {
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    .social a {
+      text-decoration: none;
+      color: #FFD700;
+      font-size: 1.2em;
+    }
+
+    .social i {
+      margin-right: 8px;
+      color: #1877f2;
+    }
+
+    footer {
+      background-color: #111;
+      color: #aaa;
+      padding: 20px 10px;
+      text-align: center;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+      header { font-size: 1.8em; }
+      .scrolling-text p { font-size: 1em; }
     }
   </style>
 </head>
 <body>
 
-  <h1>MSTV HLS Stream Test</h1>
+  <header>MSTV NETWORK</header>
 
-  <div id="videoContainer">
-    <video id="videoPlayer"
-           class="video-js vjs-default-skin"
-           playsinline
-           webkit-playsinline
-           muted
-           autoplay
-           controls
-           preload="auto"
-           crossorigin="anonymous">
-      <source src="" type="application/x-mpegURL" />
-    </video>
+  <div class="scrolling-text">
+    <p>Welcome to MSTV Network — Streaming Live 24/7 — Stay Tuned for Exclusive Content and Updates!</p>
   </div>
 
-  <button id="playButton">▶️ Click to Play Stream</button>
+  <div id="videoContainer">
+    <video id="videoPlayer" class="video-js vjs-default-skin" preload="auto" crossorigin="anonymous" playsinline></video>
+    <span id="muteToggle">🔈</span>
+    <div id="liveStamp">LIVE</div>
+    <div id="playButton">CLICK TO▶️▶️ WATCH LIVE</div>
+    <div id="loadingOverlay">
+      <div class="spinner"></div>
+      <div>Loading...</div>
+    </div>
+  </div>
 
-  <!-- Video.js JS -->
+  <div class="social">
+    <a href="https://facebook.com" target="_blank">
+      <i class="fab fa-facebook"></i>Click to follow
+    </a>
+  </div>
+
+  <div class="image-grid">
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.png" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(4).jpeg" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/live-sports-plus-hd-otk-logo.webp" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/81GCH6UU7qL.png" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(2).jpeg" />
+    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(1).png" />
+  </div>
+
+  <footer>
+    <div>About Us: MSTV is your trusted source for streaming content 24/7.</div>
+    <div>&copy; 2025 MSTV Network. All rights reserved.</div>
+  </footer>
+
+  <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+
   <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
-
   <script>
-    const streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+    let player;
+    let hasPlaylistLoaded = false;
+    let playlist = [];
+    let videoDurations = [];
+    let totalPlaylistDuration = 0;
 
-    let player = videojs('videoPlayer', {
-      autoplay: false,
-      controls: true,
-      muted: true,
-      techOrder: ['html5'],
-      html5: {
-        vhs: { overrideNative: false }
+    // --- Core Live Simulation Logic ---
+    function getPlaybackPosition() {
+      const now = Math.floor(Date.now() / 1000);
+      const broadcastTime = now % Math.floor(totalPlaylistDuration);
+
+      let offset = 0;
+      for (let i = 0; i < videoDurations.length; i++) {
+        if (broadcastTime < offset + videoDurations[i]) {
+          return { index: i, time: broadcastTime - offset };
+        }
+        offset += videoDurations[i];
       }
-    });
+      return { index: 0, time: 0 };
+    }
 
-    // For non-iOS browsers (e.g., Chrome Android), override native HLS
-    if (!/iP(hone|od|ad)/.test(navigator.platform)) {
-      player.ready(() => {
-        player.tech({ IWillNotUseThisInPlugins: true }).vhs.overrideNative = true;
+    function setVideoSource() {
+      if (!hasPlaylistLoaded || playlist.length === 0) return;
+
+      const { index, time } = getPlaybackPosition();
+      const url = playlist[index];
+
+      const source = {
+        src: url,
+        type: 'video/mp4'
+      };
+
+      player.src(source);
+      
+      player.one('loadedmetadata', () => {
+        player.currentTime(time);
+        
+        player.play().catch(e => {
+          console.error("Video playback failed:", e);
+          showLoading(true);
+        });
+      });
+
+      player.one('ended', () => {
+        setVideoSource();
       });
     }
 
-    // Button interaction
-    let hasInteracted = false;
-    const playButton = document.getElementById('playButton');
-
-    ['click', 'touchstart'].forEach(eventType => {
-      playButton.addEventListener(eventType, () => {
-        if (hasInteracted) return;
-
-        hasInteracted = true;
-        playButton.style.display = 'none';
-
-        player.src({
-          src: streamUrl,
-          type: 'application/x-mpegURL'
-        });
-
-        player.play().catch(err => {
-          console.error("Autoplay/play error:", err);
-          alert("Failed to play the video. Please try again.");
-        });
+    // --- Core Player Initialization and Event Handling ---
+    function initializeVideoPlayer() {
+      player = videojs('videoPlayer', {
+        autoplay: 'muted', // Autoplay for Chrome
+        techOrder: ['html5'],
+        muted: true,
+        controls: false
       });
+      
+      const muteToggle = document.getElementById('muteToggle');
+      const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
+      
+      // We directly un-mute here for Chrome
+      if (isUnmuted) {
+        player.muted(false);
+        muteToggle.textContent = '🔊';
+      }
+
+      // Hide the play button since we're using autoplay
+      document.getElementById('playButton').style.display = 'none';
+
+      muteToggle.addEventListener('click', () => {
+        const currentMuted = player.muted();
+        player.muted(!currentMuted);
+        localStorage.setItem('isUnmuted', currentMuted);
+        muteToggle.textContent = currentMuted ? '🔊' : '🔈';
+      });
+
+      player.on('waiting', () => showLoading(true));
+      player.on('loadeddata', () => showLoading(false));
+      player.on('playing', () => showLoading(false));
+      player.on('error', (e) => {
+        console.error("Video.js error:", e);
+        showLoading(true);
+      });
+      
+      // Start the video logic immediately
+      if (hasPlaylistLoaded && playlist.length > 0) {
+        setVideoSource();
+      }
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+
+    async function fetchPlaylist() {
+      try {
+        const response = await fetch('playlist.json');
+        playlist = await response.json();
+
+        if (Array.isArray(playlist) && playlist.length > 0) {
+          videoDurations = await Promise.all(playlist.map(url => {
+            return new Promise(resolve => {
+              const temp = document.createElement('video');
+              temp.onloadedmetadata = () => resolve(temp.duration);
+              temp.onerror = () => {
+                console.error("Failed to load metadata for:", url);
+                resolve(0);
+              };
+              temp.src = url;
+            });
+          }));
+          totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
+          hasPlaylistLoaded = true;
+          // After loading playlist, initialize the player
+          initializeVideoPlayer();
+        } else {
+          console.error("Playlist is empty or invalid.");
+          showLoading(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch playlist.json:", err);
+        showLoading(true);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchPlaylist();
     });
   </script>
 </body>

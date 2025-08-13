@@ -24,7 +24,6 @@
   <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
 
   <style>
-    /* Your existing CSS stays unchanged */
     body {
       background-color: #1a1a1a;
       color: white;
@@ -90,7 +89,7 @@
     /* Video.js player specific styling to match your theme */
     .video-js {
       width: 100%;
-      pointer-events: none; /* Disables all interaction with the video element */
+      pointer-events: none;
     }
 
     /* Hide all default Video.js controls */
@@ -245,17 +244,66 @@
   <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
   <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script>
-
   <script>
     let player;
     let hasUserInteracted = false;
     let hasPlaylistLoaded = false;
     let playlist = [];
+    let videoDurations = [];
+    let totalPlaylistDuration = 0;
+
+    // --- Core Live Simulation Logic ---
+
+    // This function calculates the "live" position within the playlist
+    function getPlaybackPosition() {
+      // Get the current time in seconds since the Unix epoch
+      const now = Math.floor(Date.now() / 1000);
+      // Find the current position within the looping playlist
+      const broadcastTime = now % Math.floor(totalPlaylistDuration);
+
+      let offset = 0;
+      for (let i = 0; i < videoDurations.length; i++) {
+        if (broadcastTime < offset + videoDurations[i]) {
+          return { index: i, time: broadcastTime - offset };
+        }
+        offset += videoDurations[i];
+      }
+      return { index: 0, time: 0 }; // Fallback to the beginning of the playlist
+    }
+
+    // This function sets the video source and seeks to the correct time
+    function setVideoSource() {
+      if (!hasPlaylistLoaded || playlist.length === 0) return;
+
+      const { index, time } = getPlaybackPosition();
+      const url = playlist[index];
+
+      const source = {
+        src: url,
+        type: 'video/mp4' // Assuming .mp4 files for a playlist
+      };
+
+      // Set the source
+      player.src(source);
+
+      // Once metadata is loaded, seek to the correct time and play
+      player.on('loadedmetadata', () => {
+        player.currentTime(time);
+        player.play().catch(e => {
+          console.error("Video playback failed:", e);
+          showLoading(true);
+        });
+      });
+
+      // When a video ends, set the next one in the playlist
+      player.on('ended', () => {
+        setVideoSource();
+      });
+    }
 
     // --- Core Player Initialization and Event Handling ---
+
     function initializeVideoPlayer() {
-      // Create a Video.js player instance
       player = videojs('videoPlayer', {
         autoplay: 'muted',
         techOrder: ['html5'],
@@ -263,12 +311,10 @@
         controls: false // Explicitly disable controls
       });
 
-      // Load mute state from local storage
       const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
       player.muted(!isUnmuted);
       document.getElementById('muteToggle').textContent = isUnmuted ? '🔊' : '🔈';
 
-      // Attach your custom mute button logic
       document.getElementById('muteToggle').addEventListener('click', () => {
         const currentMuted = player.muted();
         player.muted(!currentMuted);
@@ -276,20 +322,19 @@
         document.getElementById('muteToggle').textContent = currentMuted ? '🔊' : '🔈';
       });
 
-      // Attach your custom play button logic
       document.getElementById('playButton').addEventListener('click', () => {
         if (!hasUserInteracted) {
           hasUserInteracted = true;
           document.getElementById('playButton').style.display = 'none';
           showLoading(true);
           if (hasPlaylistLoaded && playlist.length > 0) {
-            setVideoSource(playlist[0]);
+            setVideoSource();
           }
         }
       });
 
-      // Attach loading overlay logic
       player.on('waiting', () => showLoading(true));
+      player.on('loadeddata', () => showLoading(false));
       player.on('playing', () => showLoading(false));
       player.on('error', (e) => {
         console.error("Video.js error:", e);
@@ -297,38 +342,31 @@
       });
     }
 
-    // Set the video source
-    function setVideoSource(url) {
-      if (!url) {
-        console.error("No HLS stream URL available.");
-        showLoading(true);
-        return;
-      }
-
-      const source = {
-        src: url,
-        type: 'application/x-mpegURL' // HLS MIME type
-      };
-
-      player.src(source);
-      player.play().catch(e => {
-        console.error("Video playback failed:", e);
-        showLoading(true);
-      });
-    }
-
-    // Show/hide loading overlay
     function showLoading(show) {
       document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
     }
 
-    // Fetch the playlist.json on page load
+    // --- Fetch Playlist and Calculate Durations ---
+
     async function fetchPlaylist() {
       try {
         const response = await fetch('playlist.json');
         playlist = await response.json();
-        
+
         if (Array.isArray(playlist) && playlist.length > 0) {
+          // Calculate durations of each video in the playlist
+          videoDurations = await Promise.all(playlist.map(url => {
+            return new Promise(resolve => {
+              const temp = document.createElement('video');
+              temp.onloadedmetadata = () => resolve(temp.duration);
+              temp.onerror = () => {
+                console.error("Failed to load metadata for:", url);
+                resolve(0);
+              };
+              temp.src = url;
+            });
+          }));
+          totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
           hasPlaylistLoaded = true;
         } else {
           console.error("Playlist is empty or invalid.");
@@ -346,4 +384,4 @@
     });
   </script>
 </body>
-      </html>
+</html>

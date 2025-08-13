@@ -2,212 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-  <meta name="description" content="MSTV Network offers a variety of live TV channels including music, movies, and more. Watch your favorite channels online for free." />
-  <meta name="keywords" content="live TV, MSTV Network, free TV, live channels, streaming, music, bollywood, saga music" />
-  <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="MSTV Network" />
-  <meta property="og:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
-  <meta property="og:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
-  <meta property="og:url" content="https://mstvnet.netlify.app/" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="MSTV Network" />
-  <meta name="twitter:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
-  <meta name="twitter:url" content="https://mstvnet.netlify.app/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MSTV HLS Stream Test</title>
 
-  <title>MSTV Network</title>
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <!-- Video.js CSS -->
   <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
 
   <style>
-    /* [Styles remain unchanged from your original code] */
-    /* You can keep all your CSS as-is */
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    #videoContainer {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .video-js {
+      width: 100%;
+      height: auto;
+      border: 2px solid #444;
+    }
+
+    #playButton {
+      margin-top: 20px;
+      font-size: 1.1em;
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <header>MSTV NETWORK</header>
-
-  <div class="scrolling-text">
-    <p>Welcome to MSTV Network — Streaming Live 24/7 — Stay Tuned for Exclusive Content and Updates!</p>
-  </div>
+  <h1>🎥 MSTV Live Stream Test</h1>
 
   <div id="videoContainer">
     <video id="videoPlayer"
            class="video-js vjs-default-skin"
-           preload="auto"
-           autoplay
-           muted
            playsinline
-           crossorigin="anonymous"></video>
-    <span id="muteToggle">🔈</span>
-    <div id="liveStamp">LIVE</div>
-    <div id="playButton">CLICK TO▶️▶️ WATCH LIVE</div>
-    <div id="loadingOverlay">
-      <div class="spinner"></div>
-      <div>Loading...</div>
-    </div>
+           webkit-playsinline
+           muted
+           autoplay
+           controls
+           preload="auto"
+           crossorigin="anonymous">
+      <source src="" type="application/x-mpegURL" />
+    </video>
   </div>
 
-  <div class="social">
-    <a href="https://facebook.com" target="_blank">
-      <i class="fab fa-facebook"></i>Click to follow
-    </a>
-  </div>
+  <button id="playButton">▶️ Click to Start Stream</button>
 
-  <div class="image-grid">
-    <!-- [Image grid remains unchanged] -->
-  </div>
-
-  <footer>
-    <div>About Us: MSTV is your trusted source for streaming content 24/7.</div>
-    <div>&copy; 2025 MSTV Network. All rights reserved.</div>
-  </footer>
-
-  <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+  <!-- Video.js Library -->
   <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
 
   <script>
-    let player;
-    let hasUserInteracted = false;
-    let hasPlaylistLoaded = false;
-    let playlist = [];
-    let videoDurations = [];
-    let totalPlaylistDuration = 0;
+    const streamUrl = "https://i-cdn-0.deand373use.com/stream2/i-cdn-0/bf48c44ff2964ef3ba8e9c99fd91e01a/MJTMsp1RshGTygnMNRUR2N2MSlnWXZEdMNDZzQWe5MDZzMmdZJTO1R2RWVHZDljekhkSsl1VwYnWtx2cihVT250ROtmTqpEbPRUQ35keBRjT6lUNapWTzoFVNdnTElUNNRVSwklMZhXTqFUP:1755061359:120.19.134.161:59b3fb989d41ba97a327883a69029286bfd298e9b2a926e28e46dd70892c31d3/index.m3u8";
 
-    function getPlaybackPosition() {
-      const now = Math.floor(Date.now() / 1000);
-      const broadcastTime = now % Math.floor(totalPlaylistDuration);
+    const playButton = document.getElementById('playButton');
 
-      let offset = 0;
-      for (let i = 0; i < videoDurations.length; i++) {
-        if (broadcastTime < offset + videoDurations[i]) {
-          return { index: i, time: broadcastTime - offset };
+    const player = videojs('videoPlayer', {
+      autoplay: false,
+      controls: true,
+      muted: true,
+      techOrder: ['html5'],
+      html5: {
+        vhs: {
+          overrideNative: false // Use native HLS on iOS
         }
-        offset += videoDurations[i];
       }
-      return { index: 0, time: 0 };
+    });
+
+    // For Android browsers or others that need it, override native HLS
+    if (!/iP(hone|od|ad)/.test(navigator.platform)) {
+      player.ready(() => {
+        try {
+          player.tech({ IWillNotUseThisInPlugins: true }).vhs.overrideNative = true;
+        } catch (e) {
+          console.warn("Override native HLS failed:", e);
+        }
+      });
     }
 
-    function setVideoSource() {
-      if (!hasPlaylistLoaded || playlist.length === 0) return;
+    let hasStarted = false;
 
-      const { index, time } = getPlaybackPosition();
-      const url = playlist[index];
+    ['click', 'touchstart'].forEach(eventType => {
+      playButton.addEventListener(eventType, () => {
+        if (hasStarted) return;
 
-      const source = {
-        src: url,
-        type: 'video/mp4'
-      };
+        hasStarted = true;
+        playButton.style.display = 'none';
 
-      player.src(source);
+        player.src({
+          src: streamUrl,
+          type: 'application/x-mpegURL'
+        });
 
-      player.one('loadedmetadata', () => {
-        player.play().then(() => {
-          player.currentTime(time);
-        }).catch(e => {
-          console.error("Video playback failed:", e);
-          showLoading(true);
+        player.play().catch(err => {
+          console.error("Playback error:", err);
+          alert("Video couldn't start. Try refreshing or using a different browser.");
         });
       });
-
-      player.one('ended', () => {
-        setVideoSource();
-      });
-    }
-
-    function initializeVideoPlayer() {
-      player = videojs('videoPlayer', {
-        autoplay: false,
-        techOrder: ['html5'],
-        muted: true,
-        controls: false
-      });
-
-      const muteToggle = document.getElementById('muteToggle');
-      const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
-      muteToggle.textContent = isUnmuted ? '🔊' : '🔈';
-
-      muteToggle.addEventListener('click', () => {
-        const currentMuted = player.muted();
-        player.muted(!currentMuted);
-        localStorage.setItem('isUnmuted', currentMuted);
-        muteToggle.textContent = currentMuted ? '🔊' : '🔈';
-      });
-
-      document.getElementById('playButton').addEventListener('click', () => {
-        if (!hasUserInteracted) {
-          hasUserInteracted = true;
-          document.getElementById('playButton').style.display = 'none';
-          showLoading(true);
-
-          if (hasPlaylistLoaded && playlist.length > 0) {
-            setVideoSource();
-
-            const isUnmuted = localStorage.getItem('isUnmuted') === 'true';
-            if (isUnmuted) {
-              player.muted(false);
-              muteToggle.textContent = '🔊';
-            }
-          }
-        }
-      });
-
-      // Allow video area tap to count as user interaction
-      document.getElementById('videoPlayer').addEventListener('click', () => {
-        if (!hasUserInteracted) {
-          document.getElementById('playButton').click();
-        }
-      });
-
-      player.on('waiting', () => showLoading(true));
-      player.on('loadeddata', () => showLoading(false));
-      player.on('playing', () => showLoading(false));
-      player.on('error', (e) => {
-        console.error("Video.js error:", e);
-        showLoading(true);
-      });
-    }
-
-    function showLoading(show) {
-      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-    }
-
-    async function fetchPlaylist() {
-      try {
-        const response = await fetch('playlist.json');
-        playlist = await response.json();
-
-        if (Array.isArray(playlist) && playlist.length > 0) {
-          videoDurations = await Promise.all(playlist.map(url => {
-            return new Promise(resolve => {
-              const temp = document.createElement('video');
-              temp.onloadedmetadata = () => resolve(temp.duration);
-              temp.onerror = () => {
-                console.error("Failed to load metadata for:", url);
-                resolve(0);
-              };
-              temp.src = url;
-            });
-          }));
-          totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
-          hasPlaylistLoaded = true;
-        } else {
-          console.error("Playlist is empty or invalid.");
-          showLoading(true);
-        }
-      } catch (err) {
-        console.error("Failed to fetch playlist.json:", err);
-        showLoading(true);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchPlaylist().then(initializeVideoPlayer);
     });
   </script>
+
 </body>
 </html>

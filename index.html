@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MSTV Network</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Font Awesome for social icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
   <style>
     body {
       background-color: #1a1a1a;
@@ -48,7 +51,7 @@
       width: 90%;
       max-width: 1280px;
       margin: 30px auto;
-      padding-top: 56.25%; /* 16:9 ratio */
+      padding-top: 56.25%; /* 16:9 aspect ratio */
       background-color: black;
     }
 
@@ -187,74 +190,71 @@
     const video = document.getElementById('videoPlayer');
     const muteToggle = document.getElementById('muteToggle');
 
-    video.muted = true; // Always start muted
+    video.muted = true;
     muteToggle.textContent = '🔈';
 
     muteToggle.addEventListener('click', () => {
       video.muted = !video.muted;
       muteToggle.textContent = video.muted ? '🔈' : '🔊';
-      if (!video.paused) video.play().catch(console.log);
+      if (!video.paused) video.play().catch(() => {});
     });
 
+    // Your stream playlist and durations (in seconds)
     const playlist = [
-      "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-     
-      "https://flipfit-cdn.akamaized.net/flip_hls/661f570aab9d840019942b80-473e0b/video_h1.m3u8"
+      "https://flipfit-cdn.akamaized.net/flip_hls/661f570aab9d840019942b80-473e0b/video_h1.m3u8",
+      
+      "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
     ];
 
-    const videoDurations = [120, 45]; // durations in seconds (can be 3600, etc.)
-    const totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
-
-    let hlsInstance = null;
-
-    function loadStream(url) {
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
-
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls();
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play();
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => video.play());
-      } else {
-        alert('Your browser does not support HLS playback.');
-      }
-    }
+    const videoDurations = [45, 60]; // seconds
+    const totalDuration = videoDurations.reduce((a, b) => a + b, 0);
+    let hls = null;
+    let currentIndex = -1;
 
     function getPlaybackPosition() {
-      const now = Math.floor(Date.now() / 1000) % totalPlaylistDuration;
-      let accumulated = 0;
-      for (let i = 0; i < playlist.length; i++) {
-        accumulated += videoDurations[i];
-        if (now < accumulated) {
-          return { index: i, time: now - (accumulated - videoDurations[i]) };
+      const now = Math.floor(Date.now() / 1000) % totalDuration;
+      let offset = 0;
+      for (let i = 0; i < videoDurations.length; i++) {
+        if (now < offset + videoDurations[i]) {
+          return { index: i, time: now - offset };
         }
+        offset += videoDurations[i];
       }
       return { index: 0, time: 0 };
     }
 
-    function updateVideoSource() {
-      const pos = getPlaybackPosition();
-      const currentUrl = playlist[pos.index];
+    function loadStream(url, startTime) {
+      if (hls) {
+        hls.destroy();
+      }
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.currentTime = startTime;
+        video.play().catch(() => {});
+      });
+    }
 
-      if (!video.src.includes(currentUrl)) {
-        loadStream(currentUrl);
+    function syncPlayback() {
+      const { index, time } = getPlaybackPosition();
+
+      // Only load stream if different from current
+      if (index !== currentIndex) {
+        currentIndex = index;
+        loadStream(playlist[index], time);
+        return;
       }
 
-      if (Math.abs(video.currentTime - pos.time) > 1) {
-        video.currentTime = pos.time;
+      // Otherwise, silently sync time if drift > 2s
+      if (Math.abs(video.currentTime - time) > 2) {
+        video.currentTime = time;
       }
     }
 
-    updateVideoSource();
-    setInterval(updateVideoSource, 30000);
+    // Start streaming
+    syncPlayback();
+    setInterval(syncPlayback, 5000); // silent background sync
   </script>
 </body>
 </html>

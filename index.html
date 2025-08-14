@@ -2,28 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-  <meta name="description" content="MSTV Network offers a variety of live TV channels including music, movies, and more. Watch your favorite channels online for free." />
-  <meta name="keywords" content="live TV, MSTV Network, free TV, live channels, streaming, music, bollywood, saga music" />
-  <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="MSTV Network" />
-  <meta property="og:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
-  <meta property="og:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
-  <meta property="og:url" content="https://mstvnet.netlify.app/" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="MSTV Network" />
-  <meta name="twitter:description" content="Stream live TV channels including music, movies, and more on MSTV Network." />
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/mstvnetwork/mstv2/refs/heads/main/Design-Studio-2025-01-20%20(2).png" />
-  <meta name="twitter:url" content="https://mstvnet.netlify.app/" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MSTV Network</title>
-
-  <!-- Font Awesome for Facebook Icon -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    /* Your existing CSS stays unchanged */
     body {
       background-color: #1a1a1a;
       color: white;
@@ -61,33 +43,27 @@
       100% { transform: translateX(-100%); }
     }
 
-    .image-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      padding: 20px;
-    }
-
-    .image-grid img {
-      width: 100%;
-      height: 100px;
-      object-fit: cover;
-      border: 2px solid #333;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-    }
-
-    #videoContainer {
+    .video-wrapper {
       position: relative;
       width: 90%;
       max-width: 1280px;
       margin: 30px auto;
-      border: 2px solid #333;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      padding-top: 56.25%; /* 16:9 ratio */
       background-color: black;
+    }
+
+    #videoContainer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
 
     #videoPlayer {
       width: 100%;
+      height: 100%;
+      object-fit: cover;
       pointer-events: none;
       user-select: none;
     }
@@ -122,35 +98,19 @@
       z-index: 10;
     }
 
-    #loadingOverlay {
-      position: absolute;
-      top: 0;
-      left: 0;
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      padding: 20px;
+    }
+
+    .image-grid img {
       width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.7);
-      color: #FFD700;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 12;
-      display: none;
-    }
-
-    .spinner {
-      border: 6px solid #333;
-      border-top: 6px solid #FFD700;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 10px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      height: 100px;
+      object-fit: cover;
+      border: 2px solid #333;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
     }
 
     .social {
@@ -191,13 +151,11 @@
     <p>Welcome to MSTV Network — Streaming Live 24/7 — Stay Tuned for Exclusive Content and Updates!</p>
   </div>
 
-  <div id="videoContainer">
-    <video id="videoPlayer" autoplay muted playsinline></video>
-    <span id="muteToggle" title="Toggle Mute">🔈</span>
-    <div id="liveStamp">LIVE</div>
-    <div id="loadingOverlay">
-      <div class="spinner"></div>
-      <div>Loading...</div>
+  <div class="video-wrapper">
+    <div id="videoContainer">
+      <video id="videoPlayer" autoplay muted playsinline></video>
+      <span id="muteToggle">🔈</span>
+      <div id="liveStamp">LIVE</div>
     </div>
   </div>
 
@@ -223,95 +181,80 @@
     <div>&copy; 2025 MSTV Network. All rights reserved.</div>
   </footer>
 
-  <!-- GoatCounter analytics -->
-  <script data-goatcounter="https://mstv7.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-
-  <!-- HLS.js and player script -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+  <!-- HLS.js -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('videoPlayer');
     const muteToggle = document.getElementById('muteToggle');
-    const loadingOverlay = document.getElementById('loadingOverlay');
 
-    const hlsUrl = "https://i-cdn-0.deand373use.com/stream2/i-cdn-0/6ddeb17c170fbd6bb594eb9ac4e2cc2e/MJTMsp1RshGTygnMNRUR2N2MSlnWXZEdMNDZzQWe5MDZzMmdZJTO1R2RWVHZDljekhkSsl1VwYnWtx2cihVT250ROtmTqpEbPRUQ35keBRjT6lUNapWTzoFVNdnTElUNNRVSwklMZhXTqFUP:1755089890:101.119.183.128:59b3fb989d41ba97a327883a69029286bfd298e9b2a926e28e46dd70892c31d3/index.m3u8";
-
-    // Total duration of your stream in seconds (set accordingly)
-    const videoDuration = 8028; // example: 2 hours 13 minutes
-
-    // Broadcast start time (UTC)
-    const broadcastStartTime = new Date("2025-08-13T00:00:00Z").getTime();
-
-    function getCurrentPlaybackPosition() {
-      const now = Date.now();
-      const elapsed = (now - broadcastStartTime) / 1000; // seconds
-      return elapsed % videoDuration;
-    }
-
-    function syncPlaybackPosition() {
-      const desiredTime = getCurrentPlaybackPosition();
-      const diff = Math.abs(video.currentTime - desiredTime);
-      if (diff > 1) {
-        video.currentTime = desiredTime;
-      }
-    }
-
-    video.addEventListener('seeking', () => {
-      setTimeout(() => {
-        const desiredTime = getCurrentPlaybackPosition();
-        if (Math.abs(video.currentTime - desiredTime) > 0.5) {
-          video.currentTime = desiredTime;
-        }
-      }, 200);
-    });
-
-    function updateMuteIcon() {
-      muteToggle.textContent = video.muted ? '🔈' : '🔊';
-      muteToggle.title = video.muted ? 'Unmute' : 'Mute';
-    }
+    video.muted = true; // Always start muted
+    muteToggle.textContent = '🔈';
 
     muteToggle.addEventListener('click', () => {
       video.muted = !video.muted;
-      updateMuteIcon();
+      muteToggle.textContent = video.muted ? '🔈' : '🔊';
       if (!video.paused) video.play().catch(console.log);
     });
 
-    function showLoading(show) {
-      loadingOverlay.style.display = show ? 'flex' : 'none';
+    const playlist = [
+      "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+     
+      "https://flipfit-cdn.akamaized.net/flip_hls/661f570aab9d840019942b80-473e0b/video_h1.m3u8"
+    ];
+
+    const videoDurations = [60, 60]; // durations in seconds (can be 3600, etc.)
+    const totalPlaylistDuration = videoDurations.reduce((a, b) => a + b, 0);
+
+    let hlsInstance = null;
+
+    function loadStream(url) {
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play();
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => video.play());
+      } else {
+        alert('Your browser does not support HLS playback.');
+      }
     }
 
-    video.addEventListener('waiting', () => showLoading(true));
-    video.addEventListener('playing', () => showLoading(false));
-
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      showLoading(true);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.currentTime = getCurrentPlaybackPosition();
-        video.play().catch(console.log);
-        updateMuteIcon();
-        showLoading(false);
-      });
-
-      // Optional: keep video synced every 30 seconds
-      setInterval(syncPlaybackPosition, 30000);
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error("HLS.js error:", data);
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl;
-      video.addEventListener('loadedmetadata', () => {
-        video.currentTime = getCurrentPlaybackPosition();
-        video.play().catch(console.log);
-        updateMuteIcon();
-      });
-      setInterval(syncPlaybackPosition, 30000);
-    } else {
-      alert('Your browser does not support HLS playback.');
+    function getPlaybackPosition() {
+      const now = Math.floor(Date.now() / 1000) % totalPlaylistDuration;
+      let accumulated = 0;
+      for (let i = 0; i < playlist.length; i++) {
+        accumulated += videoDurations[i];
+        if (now < accumulated) {
+          return { index: i, time: now - (accumulated - videoDurations[i]) };
+        }
+      }
+      return { index: 0, time: 0 };
     }
+
+    function updateVideoSource() {
+      const pos = getPlaybackPosition();
+      const currentUrl = playlist[pos.index];
+
+      if (!video.src.includes(currentUrl)) {
+        loadStream(currentUrl);
+      }
+
+      if (Math.abs(video.currentTime - pos.time) > 1) {
+        video.currentTime = pos.time;
+      }
+    }
+
+    updateVideoSource();
+    setInterval(updateVideoSource, 10000);
   </script>
 </body>
 </html>

@@ -27,10 +27,17 @@
     }
 
     .scrolling-text {
-      background: #222;
       overflow: hidden;
       white-space: nowrap;
       box-sizing: border-box;
+    }
+
+    .top-scrolling-text {
+      background-color: #222;
+    }
+
+    .bottom-scrolling-text {
+      background-color: #004080;
     }
 
     .scrolling-text p {
@@ -133,8 +140,8 @@
     }
 
     footer {
-      background-color: #111;
-      color: #aaa;
+      background-color: black;
+      color: yellow;
       padding: 20px 10px;
       text-align: center;
       font-size: 0.9em;
@@ -148,12 +155,15 @@
 </head>
 <body>
 
+  <!-- Page Header -->
   <header>MSTV NETWORK</header>
 
-  <div class="scrolling-text">
+  <!-- Top Scrolling Text -->
+  <div class="scrolling-text top-scrolling-text">
     <p>Welcome to MSTV Network — Streaming Live 24/7 — Stay Tuned for Exclusive Content and Updates!</p>
   </div>
 
+  <!-- Video Player Section -->
   <div class="video-wrapper">
     <div id="videoContainer">
       <video id="videoPlayer" autoplay muted playsinline></video>
@@ -161,13 +171,22 @@
       <div id="liveStamp">LIVE</div>
     </div>
   </div>
+    
 
+  <!-- Bottom Scrolling Text (dynamic) -->
+  <div class="scrolling-text bottom-scrolling-text">
+    <p>Loading schedule...</p>
+  </div>
+  
+   <!-- Social Links -->
   <div class="social">
     <a href="https://facebook.com" target="_blank">
       <i class="fab fa-facebook"></i>Click to follow
     </a>
   </div>
-
+  <header>OUR PARTNERS</header>
+  
+ <!-- Image Grid -->
   <div class="image-grid">
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" />
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" />
@@ -179,16 +198,32 @@
     <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(1).png" />
   </div>
 
-  <footer>
-    <div>About Us: MSTV is your trusted source for streaming content 24/7.</div>
-    <div>&copy; 2025 MSTV Network. All rights reserved.</div>
-  </footer>
+ <footer>
+  <div class="footer-section">
+    <div class="footer-column">
+      <h2>About Us</h2>
+      <p>MSTV Network is a free streaming platform bringing you 24/7 access to music, movies, news, kids content, and more. We aim to deliver high-quality entertainment for audiences worldwide — no subscriptions, no hidden fees.</p>
+      <h3>⚠️ Disclaimer</h3>
+      <p>MSTV Network streams content freely available on public platforms. We do not host or claim ownership of any third-party media. All copyrights remain with their respective owners.</p>
+      <h4>📜 Terms of Service</h4>
+      <p>By using MSTV Network, you agree to view content solely for personal, non-commercial use. We are not responsible for third-party streams or their availability. Continued use constitutes acceptance of these terms.</p>
+    </div>
+    <div class="footer-column">
+      <h2>Contact</h2>
+      <p>Email: contact@mstvindia.com</p>
+      <p>Phone: +001-305-242-4447</p>
+    </div>
+  </div>
+  <div class="copyright">© 2025 MSTV INDIA. All rights reserved.</div>
+</footer>
+
 
   <!-- HLS.js -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('videoPlayer');
     const muteToggle = document.getElementById('muteToggle');
+    const bottomScrollText = document.querySelector('.bottom-scrolling-text p');
 
     video.muted = true;
     muteToggle.textContent = '🔈';
@@ -199,14 +234,19 @@
       if (!video.paused) video.play().catch(() => {});
     });
 
-    // Your stream playlist and durations (in seconds)
+    // Stream URLs
     const playlist = [
-      "https://flipfit-cdn.akamaized.net/flip_hls/661f570aab9d840019942b80-473e0b/video_h1.m3u8",
-      
-      "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+      "https://i-cdn-0.deand373use.com/stream2/i-cdn-0/6ddeb17c170fbd6bb594eb9ac4e2cc2e/MJTMsp1RshGTygnMNRUR2N2MSlnWXZEdMNDZzQWe5MDZzMmdZJTO1R2RWVHZDljekhkSsl1VwYnWtx2cihVT250ROtmTqpEbPRUQ35keBRjT6lUNapWTzoFVNdnTElUNNRVSwklMZhXTqFUP:1755163377:101.119.183.128:59b3fb989d41ba97a327883a69029286bfd298e9b2a926e28e46dd70892c31d3/index.m3u8",
+      "https://t9lr3d.cfglobalcdn.com/silverlight/secip/110686/133612/xPHzmUVSH8lljeeF88nIoA/MTAxLjExOS4xODMuMTI4/1755182595/hls-vod-s002/flv/api/files/videos/2025/05/25/17481268454gjld.mp4.m3u8"
     ];
 
-    const videoDurations = [45, 60]; // seconds
+    // Corresponding titles
+    const titles = [
+      "JURRASIC WORLD",
+      "SIKANDAR"
+    ];
+
+    const videoDurations = [8020, 8020]; // seconds
     const totalDuration = videoDurations.reduce((a, b) => a + b, 0);
     let hls = null;
     let currentIndex = -1;
@@ -236,25 +276,32 @@
       });
     }
 
+    function updateBottomScrollText(index) {
+      const nowPlaying = titles[index];
+      const comingNext = titles[(index + 1) % titles.length];
+      bottomScrollText.textContent = `Now Playing: ${nowPlaying} — Coming Next: ${comingNext}`;
+    }
+
     function syncPlayback() {
       const { index, time } = getPlaybackPosition();
 
-      // Only load stream if different from current
+      // Load stream if different
       if (index !== currentIndex) {
         currentIndex = index;
         loadStream(playlist[index], time);
+        updateBottomScrollText(index);
         return;
       }
 
-      // Otherwise, silently sync time if drift > 2s
+      // Resync if time drift
       if (Math.abs(video.currentTime - time) > 2) {
         video.currentTime = time;
       }
     }
 
-    // Start streaming
+    // Start streaming and text updates
     syncPlayback();
-    setInterval(syncPlayback, 1000); // silent background sync
+    setInterval(syncPlayback, 1000);
   </script>
 </body>
 </html>

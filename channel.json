@@ -1,1 +1,10 @@
+{
+  "type": "m3u8",
+  "durations": [120,120],
+  "urls": [ "https://si.videoapne.to/hls/,bdohx5fd7bboxuzvta5p4fsr3efmht7i7kgep73bctremid5jv6k6gdchada,.urlset/master.m3u8",
+    "https://s2.videoapne.to/hls/,bdohx5nc7bboxuzvta5p4tq3radqxuv3mtkbrtqjqteoclkkcxy7cpeouuhq,.urlset/master.m3u8"
+  ],
+    "titles": ["WWE RAW", "WAR 2"
+  ]
+}
 

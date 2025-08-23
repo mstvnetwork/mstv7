@@ -2,253 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pseudo Live with Seek Lock & Banner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MSTV NETWORK</title>
   <style>
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      background: black;
-      height: 100%;
+      background-color: black;
       overflow: hidden;
     }
 
-    #videoContainer {
+    #video-container {
       position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      background-color: black;
     }
 
     video {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      background-color: black;
     }
 
-    #loaderOverlay {
+    #unmute-icon {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: gold;
-      font-family: sans-serif;
-      font-size: 1.2em;
+      top: 20px;
+      right: 20px;
+      font-size: 28px;
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 8px;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
       z-index: 10;
     }
 
-    #muteButton {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 11;
-      font-size: 1.5em;
-      padding: 8px;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-
-    #scrollBanner {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: #007BFF;
-      color: white;
-      font-family: sans-serif;
-      font-size: 1em;
-      overflow: hidden;
-      white-space: nowrap;
-      z-index: 11;
-    }
-
-    #scrollText {
-      display: inline-block;
-      padding-left: 100%;
-      animation: scrollText 20s linear infinite;
-    }
-
-    @keyframes scrollText {
-      0% {
-        transform: translateX(0%);
-      }
-      100% {
-        transform: translateX(-100%);
-      }
+    #unmute-icon.hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div id="videoContainer">
-    <video id="videoPlayer" autoplay playsinline muted></video>
-    <div id="loaderOverlay">Loading Channel...</div>
-    <button id="muteButton">🔇</button>
 
-    <!-- ✅ Scrolling Banner -->
-    <div id="scrollBanner">
-      <div id="scrollText"> Now playing: "Title A" — Coming up next: "Title B"</div>
-    </div>
+  <div id="video-container">
+    <!-- 👇 No controls attribute = no seek bar -->
+    <video id="video" autoplay muted playsinline></video>
+    <div id="unmute-icon">🔇</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
-    let video = document.getElementById('videoPlayer');
-    let loader = document.getElementById('loaderOverlay');
-    let muteButton = document.getElementById('muteButton');
-    let hls = null;
-    let currentUrl = '';
-    let currentIndex = -1;
-    let channel = null;
-    let seekTimeout = null;
+    const video = document.getElementById('video');
+    const unmuteIcon = document.getElementById('unmute-icon');
 
-    function getPlaybackPosition(channel) {
-      const total = channel.durations.reduce((a, b) => a + b, 0);
-      const now = Math.floor(Date.now() / 1000) % total;
-      let offset = 0;
-      for (let i = 0; i < channel.durations.length; i++) {
-        if (now < offset + channel.durations[i]) {
-          return { index: i, time: now - offset };
-        }
-        offset += channel.durations[i];
-      }
-      return { index: 0, time: 0 };
-    }
+    // ✅ Playlist of HLS streams
+    const playlist = [
+      'https://s2.videoapne.to/hls/,bdohx5nc7bboxuzvta5p4tq3radqxuv3mtkbrtqjqteoclkkcxy7cpeouuhq,.urlset/master.m3u8',
+      'https://s2.videoapne.to/hls/,bdohx5fc7bboxuzvta5p4tafq5q4lhk4y6sy33pdv26tb564l3d4qqplubfq,.urlset/master.m3u8',
+      'https://s2.videoapne.to/hls/,bdohx45c7bboxuzvta5p4eqgr52vw6j3ea7vgwo6zcox7d7onchbss6d7wcq,.urlset/master.m3u8',
+      'https://si.videoapne.to/hls/,bdohx4vc7bboxuzvta5p4tcurfblno6745nnyguj3regq7zlefpl6pubnx2a,.urlset/master.m3u8',
+      'https://si.videoapne.to/hls/,bdohx4nc7bboxuzvta5p4siktoglm5lahpg3vvlmihttbbumfvwudnmuzmuq,.urlset/master.m3u8'
+  
+    ];
 
-    function resetVideo() {
-      const newVideo = document.createElement('video');
-      newVideo.id = 'videoPlayer';
-      newVideo.autoplay = true;
-      newVideo.playsInline = true;
-      newVideo.muted = true;
-      newVideo.style.width = "100%";
-      newVideo.style.height = "100%";
-      newVideo.style.objectFit = "cover";
-      document.getElementById('videoContainer').replaceChild(newVideo, video);
-      video = newVideo;
+    let currentIndex = 0;
+    let hls;
+    let pseudoLiveStartTime = 0; // Time when the current video started
 
-      attachMuteButtonLogic();
-      attachSeekLock();
-
-      return newVideo;
-    }
-
-    function loadStream(index, time) {
-      const url = channel.urls[index];
-      loader.style.display = 'flex';
+    function loadVideo(index) {
+      const src = playlist[index];
 
       if (hls) {
-        hls.destroy();
-        hls = null;
+        hls.destroy(); // Clean up old instance
       }
 
-      resetVideo();
+      pseudoLiveStartTime = Date.now(); // Mark new start time
 
       if (Hls.isSupported()) {
         hls = new Hls();
-        hls.loadSource(url);
+        hls.loadSource(src);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.currentTime = time;
-          video.play().catch(console.warn);
+          video.currentTime = 0;
+          video.play();
         });
-        hls.on(Hls.Events.LEVEL_LOADED, () => {
-          loader.style.display = 'none';
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+        video.addEventListener('loadedmetadata', () => {
+          video.currentTime = 0;
+          video.play();
         });
       } else {
-        video.src = url;
-        video.onloadeddata = () => {
-          video.currentTime = time;
-          video.play().catch(console.warn);
-          loader.style.display = 'none';
-        };
+        alert("Your browser doesn't support HLS playback.");
       }
     }
 
-    async function fetchChannel() {
-      try {
-        const response = await fetch('/channel.json?_=' + Date.now()); // cache-busting
-        return await response.json();
-      } catch (err) {
-        console.error("Failed to fetch channel.json", err);
-        return null;
+    // ⏩ Prevent seeking — enforce "pseudo-live"
+    video.addEventListener('seeking', () => {
+      const elapsed = (Date.now() - pseudoLiveStartTime) / 1000;
+      const tolerance = 1.5; // Allow small buffer before correcting
+      if (Math.abs(video.currentTime - elapsed) > tolerance) {
+        video.currentTime = elapsed;
       }
-    }
+    });
 
-    async function syncPlayback() {
-      const newChannel = await fetchChannel();
-      if (!newChannel || !newChannel.urls.length) return;
+    // 🎵 When one video ends, play the next
+    video.addEventListener('ended', () => {
+      currentIndex = (currentIndex + 1) % playlist.length;
+      loadVideo(currentIndex);
+    });
 
-      const { index, time } = getPlaybackPosition(newChannel);
-      const newUrl = newChannel.urls[index];
+    // 🔇 Handle unmute click
+    unmuteIcon.addEventListener('click', () => {
+      video.muted = false;
+      video.volume = 1.0;
+      unmuteIcon.classList.add('hidden');
+    });
 
-      if (index !== currentIndex || newUrl !== currentUrl) {
-        currentIndex = index;
-        currentUrl = newUrl;
-        channel = newChannel;
-        loadStream(index, time);
-        updateBanner(index, newChannel);
-      } else if (Math.abs(video.currentTime - time) > 3) {
-        video.currentTime = time;
+    video.addEventListener('volumechange', () => {
+      if (!video.muted && video.volume > 0) {
+        unmuteIcon.classList.add('hidden');
       }
-    }
+    });
 
-    function attachMuteButtonLogic() {
-      muteButton.textContent = video.muted ? '🔇' : '🔊';
-
-      muteButton.onclick = () => {
-        video.muted = !video.muted;
-        muteButton.textContent = video.muted ? '🔇' : '🔊';
-
-        if (!video.paused) {
-          video.play().catch(console.warn);
-        }
-      };
-    }
-
-    function attachSeekLock() {
-      video.addEventListener('seeking', () => {
-        clearTimeout(seekTimeout);
-        const { time: liveTime } = getPlaybackPosition(channel);
-        const currentTime = video.currentTime;
-        const diff = currentTime - liveTime;
-
-        console.log(`⏱️ Seeking diff: ${diff.toFixed(2)}s`);
-
-        if (diff > 3) {
-          console.log('⏩ Too far ahead — snapping back to live');
-          video.currentTime = liveTime;
-        } else if (diff < -3) {
-          console.log('⏪ Rewind detected — will return to live in 10s');
-          seekTimeout = setTimeout(() => {
-            console.log('🔁 Returning to live now');
-            video.currentTime = getPlaybackPosition(channel).time;
-          }, 10000);
-        }
-      });
-    }
-
-    function updateBanner(currentIndex, channel) {
-      const scrollText = document.getElementById('scrollText');
-      const currentTitle = channel.titles?.[currentIndex] || `Video ${currentIndex + 1}`;
-      const nextTitle = channel.titles?.[currentIndex + 1] || "Stay tuned...";
-      scrollText.textContent = `Now Playing: "${currentTitle}" — Coming Up Next: "${nextTitle}"`;
-    }
-
-    // Start sync loop every 5s
-    (function loop() {
-      syncPlayback();
-      setTimeout(loop, 5000);
-    })();
-
-    // Initial setup
-    attachMuteButtonLogic();
-    attachSeekLock();
+    // ⏯️ Start first video
+    loadVideo(currentIndex);
   </script>
+
 </body>
 </html>

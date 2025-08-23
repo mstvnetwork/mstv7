@@ -1,46 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Stream Embed</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: black;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pseudo Live Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
 
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-  </style>
+        #video-container, #fallback-message {
+            display: none;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 90vw;
+            max-width: 960px;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none; /* Prevents direct interaction with the video iframe */
+        }
+
+        .unmute-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 1px 1px 4px #000;
+            user-select: none;
+            border-radius: 8px;
+            transition: opacity 0.5s ease;
+        }
+
+        .unmute-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .scroll-banner {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            font-size: 1rem;
+            padding: 5px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            z-index: 4;
+        }
+
+        .scroll-banner span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: scroll-left 15s linear infinite;
+        }
+
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+    </style>
 </head>
 <body>
-  <iframe 
-    "https://s2.videoapne.to/hls/,bdohx5nc7bboxuzvta5p4tq3radqxuv3mtkbrtqjqteoclkkcxy7cpeouuhq,.urlset/master.m3u8" 
-    allowfullscreen>
-  </iframe>
+
+    <div id="video-container">
+        <div class="video-wrapper">
+            <div id="player"></div>
+            <div class="unmute-overlay" id="unmute-overlay">🔊 Tap to Unmute</div>
+            <div class="scroll-banner"><span>📺 Live Now — No Skipping | Optimized for Chrome & iOS | Stay Tuned!</span></div>
+        </div>
+    </div>
+
+    <div id="fallback-message">
+        <h2>⚠️ This livestream is only available in Google Chrome (desktop/Android) and Safari/Chrome on iOS.</h2>
+        <p>Please use one of these browsers to view the video.</p>
+    </div>
+
+    <script>
+        const playlist = [
+            { id: "zyFdeF1zwbs", duration: 55 },
+            { id: "QmSDEeAZB1g", duration: 46 },
+            { id: "JEUsXoAKFag", duration: 57 }
+        ];
+
+        const LIVE_START_TIME = new Date("2024-01-01T00:00:00Z").getTime();
+
+        let player;
+        let isUnmuted = false;
+
+        function isAllowedBrowser() {
+            const ua = navigator.userAgent;
+            const isAndroid = /Android/i.test(ua);
+            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+            const isDesktopChrome = /Chrome\/[.0-9]* Safari\/[.0-9]*$/.test(ua) && !/Edg|OPR|Brave|Vivaldi/i.test(ua);
+            const isChromeOnAndroid = isAndroid && /Chrome\/[.0-9]* Mobile/i.test(ua) && !/EdgA|OPR|Brave|SamsungBrowser/i.test(ua);
+            const isChromeOniOS = isIOS && /CriOS/i.test(ua);
+            const isSafariOniOS = isIOS && /Version\/[\d\.]+.*Safari/.test(ua);
+            return isDesktopChrome || isChromeOnAndroid || isChromeOniOS || isSafariOniOS;
+        }
+
+        function onYouTubeIframeAPIReady() {
+            if (!isAllowedBrowser()) {
+                document.getElementById("fallback-message").style.display = "block";
+                return;
+            }
+
+            document.getElementById("video-container").style.display = "block";
+
+            const playlistDuration = playlist.reduce((acc, video) => acc + video.duration, 0);
+            const totalElapsedSeconds = Math.max(0, Math.floor((Date.now() - LIVE_START_TIME) / 1000));
+            const currentPositionInLoop = totalElapsedSeconds % playlistDuration;
+
+            let cumulativeDuration = 0;
+            let videoToPlay;
+            let startTime = 0;
+
+            for (let i = 0; i < playlist.length; i++) {
+                const video = playlist[i];
+                if (currentPositionInLoop < cumulativeDuration + video.duration) {
+                    currentVideoIndex = i;
+                    videoToPlay = video;
+                    startTime = currentPositionInLoop - cumulativeDuration;
+                    break;
+                }
+                cumulativeDuration += video.duration;
+            }
+
+            if (!videoToPlay) {
+                currentVideoIndex = 0;
+                videoToPlay = playlist[0];
+            }
+
+            player = new YT.Player("player", {
+                videoId: videoToPlay.id,
+                playerVars: {
+                    autoplay: 1,
+                    mute: 1,
+                    controls: 0, // Keeps controls hidden to maintain pseudo-live effect
+                    disablekb: 1,
+                    modestbranding: 1,
+                    rel: 0,
+                    start: startTime,
+                    playsinline: 1
+                },
+                events: {
+                    onReady: (event) => {
+                        event.target.playVideo().catch(e => console.log("Play failed due to autoplay policy."));
+                    },
+                    onStateChange: (event) => {
+                        if (event.data === YT.PlayerState.ENDED) {
+                            currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
+                            player.loadVideoById({ videoId: playlist[currentVideoIndex].id, startSeconds: 0 });
+                            if (isUnmuted) {
+                                // If already unmuted, maintain the state on the next video
+                                player.unMute();
+                            }
+                        }
+                    },
+                    onError: (event) => {
+                        console.error("YouTube Player Error:", event.data);
+                    }
+                }
+            });
+        }
+
+        // Unmute logic using the overlay
+        document.getElementById("unmute-overlay").addEventListener("click", () => {
+            if (player && typeof player.unMute === "function") {
+                player.unMute();
+                isUnmuted = true;
+                document.getElementById("unmute-overlay").classList.add("hidden");
+            }
+        });
+
+        // Load YouTube API
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+    </script>
 </body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  </html>

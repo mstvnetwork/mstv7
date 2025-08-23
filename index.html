@@ -2,306 +2,253 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MSTV Network</title>
-
-  <!-- Font Awesome for social icon -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pseudo Live with Seek Lock & Banner</title>
   <style>
-    body {
-      background-color: #1a1a1a;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
+    html, body {
       margin: 0;
       padding: 0;
-    }
-
-    header {
-      text-align: center;
-      padding: 20px 10px;
-      background-color: #000;
-      font-size: 2.5em;
-      font-weight: bold;
-      color: #FFD700;
-    }
-
-    .scrolling-text {
+      background: black;
+      height: 100%;
       overflow: hidden;
-      white-space: nowrap;
-      box-sizing: border-box;
-    }
-
-    .top-scrolling-text {
-      background-color: #222;
-    }
-
-    .bottom-scrolling-text {
-      background-color: #004080;
-    }
-
-    .scrolling-text p {
-      display: inline-block;
-      padding-left: 100%;
-      animation: scroll-left 15s linear infinite;
-      font-size: 1.2em;
-      color: #fff;
-    }
-
-    @keyframes scroll-left {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-
-    .video-wrapper {
-      position: relative;
-      width: 90%;
-      max-width: 1280px;
-      margin: 30px auto;
-      padding-top: 56.25%; /* 16:9 aspect ratio */
-      background-color: black;
     }
 
     #videoContainer {
-      position: absolute;
-      top: 0; left: 0;
+      position: relative;
       width: 100%;
       height: 100%;
       overflow: hidden;
     }
 
-    #videoPlayer {
+    video {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      pointer-events: none;
-      user-select: none;
     }
 
-    #videoPlayer::-webkit-media-controls {
-      display: none !important;
+    #loaderOverlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: gold;
+      font-family: sans-serif;
+      font-size: 1.2em;
+      z-index: 10;
     }
 
-    #muteToggle {
+    #muteButton {
       position: absolute;
       top: 10px;
       right: 10px;
+      z-index: 11;
+      font-size: 1.5em;
+      padding: 8px;
       background: rgba(0, 0, 0, 0.5);
       color: white;
-      font-size: 1.5em;
-      padding: 5px 10px;
+      border: none;
       border-radius: 50%;
       cursor: pointer;
-      z-index: 10;
     }
 
-    #liveStamp {
+    #scrollBanner {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: red;
-      color: white;
-      font-weight: bold;
-      padding: 5px 10px;
-      font-size: 0.9em;
-      border-radius: 5px;
-      z-index: 10;
-    }
-
-    .image-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      padding: 20px;
-    }
-
-    .image-grid img {
+      bottom: 0;
+      left: 0;
       width: 100%;
-      height: 100px;
-      object-fit: cover;
-      border: 2px solid #333;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      background-color: #007BFF;
+      color: white;
+      font-family: sans-serif;
+      font-size: 1em;
+      overflow: hidden;
+      white-space: nowrap;
+      z-index: 11;
     }
 
-    .social {
-      text-align: center;
-      margin: 30px 0;
+    #scrollText {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scrollText 20s linear infinite;
     }
 
-    .social a {
-      text-decoration: none;
-      color: #FFD700;
-      font-size: 1.2em;
-    }
-
-    .social i {
-      margin-right: 8px;
-      color: #1877f2;
-    }
-
-    footer {
-      background-color: black;
-      color: yellow;
-      padding: 20px 10px;
-      text-align: center;
-      font-size: 0.9em;
-    }
-
-    @media (max-width: 768px) {
-      header { font-size: 1.8em; }
-      .scrolling-text p { font-size: 1em; }
+    @keyframes scrollText {
+      0% {
+        transform: translateX(0%);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
     }
   </style>
 </head>
 <body>
+  <div id="videoContainer">
+    <video id="videoPlayer" autoplay playsinline muted></video>
+    <div id="loaderOverlay">Loading Channel...</div>
+    <button id="muteButton">🔇</button>
 
-  <!-- Page Header -->
-  <header>MSTV NETWORK</header>
-
-  <!-- Top Scrolling Text -->
-  <div class="scrolling-text top-scrolling-text">
-    <p>Welcome to MSTV Network — Streaming Live 24/7 — Stay Tuned for Exclusive Content and Updates!</p>
-  </div>
-
-  <!-- Video Player Section -->
-  <div class="video-wrapper">
-    <div id="videoContainer">
-      <video id="videoPlayer" autoplay muted playsinline></video>
-      <span id="muteToggle">🔈</span>
-      <div id="liveStamp">LIVE</div>
+    <!-- ✅ Scrolling Banner -->
+    <div id="scrollBanner">
+      <div id="scrollText"> Now playing: "Title A" — Coming up next: "Title B"</div>
     </div>
   </div>
-    
 
-  <!-- Bottom Scrolling Text (dynamic) -->
-  <div class="scrolling-text bottom-scrolling-text">
-    <p>Loading schedule...</p>
-  </div>
-  
-   <!-- Social Links -->
-  <div class="social">
-    <a href="https://facebook.com" target="_blank">
-      <i class="fab fa-facebook"></i>Click to follow
-    </a>
-  </div>
-  <header>OUR PARTNERS</header>
-  
- <!-- Image Grid -->
-  <div class="image-grid">
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(1).jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images.png" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(4).jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/live-sports-plus-hd-otk-logo.webp" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/81GCH6UU7qL.png" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/download%20(2).jpeg" />
-    <img src="https://raw.githubusercontent.com/mstvnetwork/mstv1/main/images%20(1).png" />
-  </div>
-
- <footer>
-  <div class="footer-section">
-    <div class="footer-column">
-      <h2>About Us</h2>
-      <p>MSTV Network is a free streaming platform bringing you 24/7 access to music, movies, news, kids content, and more. We aim to deliver high-quality entertainment for audiences worldwide — no subscriptions, no hidden fees.</p>
-      <h3>⚠️ Disclaimer</h3>
-      <p>MSTV Network streams content freely available on public platforms. We do not host or claim ownership of any third-party media. All copyrights remain with their respective owners.</p>
-      <h4>📜 Terms of Service</h4>
-      <p>By using MSTV Network, you agree to view content solely for personal, non-commercial use. We are not responsible for third-party streams or their availability. Continued use constitutes acceptance of these terms.</p>
-    </div>
-    <div class="footer-column">
-      <h2>Contact</h2>
-      <p>Email: contact@mstvindia.com</p>
-      <p>Phone: +001-305-242-4447</p>
-    </div>
-  </div>
-  <div class="copyright">© 2025 MSTV INDIA. All rights reserved.</div>
-</footer>
-
-
-  <!-- HLS.js -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
-    const video = document.getElementById('videoPlayer');
-    const muteToggle = document.getElementById('muteToggle');
-    const bottomScrollText = document.querySelector('.bottom-scrolling-text p');
-
-    video.muted = true;
-    muteToggle.textContent = '🔈';
-
-    muteToggle.addEventListener('click', () => {
-      video.muted = !video.muted;
-      muteToggle.textContent = video.muted ? '🔈' : '🔊';
-      if (!video.paused) video.play().catch(() => {});
-    });
-
-    // Stream URLs
-    const playlist = [
-      "https://i-cdn-0.deand373use.com/stream2/i-cdn-0/6ddeb17c170fbd6bb594eb9ac4e2cc2e/MJTMsp1RshGTygnMNRUR2N2MSlnWXZEdMNDZzQWe5MDZzMmdZJTO1R2RWVHZDljekhkSsl1VwYnWtx2cihVT250ROtmTqpEbPRUQ35keBRjT6lUNapWTzoFVNdnTElUNNRVSwklMZhXTqFUP:1755163377:101.119.183.128:59b3fb989d41ba97a327883a69029286bfd298e9b2a926e28e46dd70892c31d3/index.m3u8",
-      "https://t9lr3d.cfglobalcdn.com/silverlight/secip/110686/133612/xPHzmUVSH8lljeeF88nIoA/MTAxLjExOS4xODMuMTI4/1755182595/hls-vod-s002/flv/api/files/videos/2025/05/25/17481268454gjld.mp4.m3u8"
-    ];
-
-    // Corresponding titles
-    const titles = [
-      "Jurrasic World",
-      "Sikandar"
-    ];
-
-    const videoDurations = [8020, 8020]; // seconds
-    const totalDuration = videoDurations.reduce((a, b) => a + b, 0);
+    let video = document.getElementById('videoPlayer');
+    let loader = document.getElementById('loaderOverlay');
+    let muteButton = document.getElementById('muteButton');
     let hls = null;
+    let currentUrl = '';
     let currentIndex = -1;
+    let channel = null;
+    let seekTimeout = null;
 
-    function getPlaybackPosition() {
-      const now = Math.floor(Date.now() / 1000) % totalDuration;
+    function getPlaybackPosition(channel) {
+      const total = channel.durations.reduce((a, b) => a + b, 0);
+      const now = Math.floor(Date.now() / 1000) % total;
       let offset = 0;
-      for (let i = 0; i < videoDurations.length; i++) {
-        if (now < offset + videoDurations[i]) {
+      for (let i = 0; i < channel.durations.length; i++) {
+        if (now < offset + channel.durations[i]) {
           return { index: i, time: now - offset };
         }
-        offset += videoDurations[i];
+        offset += channel.durations[i];
       }
       return { index: 0, time: 0 };
     }
 
-    function loadStream(url, startTime) {
+    function resetVideo() {
+      const newVideo = document.createElement('video');
+      newVideo.id = 'videoPlayer';
+      newVideo.autoplay = true;
+      newVideo.playsInline = true;
+      newVideo.muted = true;
+      newVideo.style.width = "100%";
+      newVideo.style.height = "100%";
+      newVideo.style.objectFit = "cover";
+      document.getElementById('videoContainer').replaceChild(newVideo, video);
+      video = newVideo;
+
+      attachMuteButtonLogic();
+      attachSeekLock();
+
+      return newVideo;
+    }
+
+    function loadStream(index, time) {
+      const url = channel.urls[index];
+      loader.style.display = 'flex';
+
       if (hls) {
         hls.destroy();
+        hls = null;
       }
-      hls = new Hls();
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.currentTime = startTime;
-        video.play().catch(() => {});
-      });
+
+      resetVideo();
+
+      if (Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.currentTime = time;
+          video.play().catch(console.warn);
+        });
+        hls.on(Hls.Events.LEVEL_LOADED, () => {
+          loader.style.display = 'none';
+        });
+      } else {
+        video.src = url;
+        video.onloadeddata = () => {
+          video.currentTime = time;
+          video.play().catch(console.warn);
+          loader.style.display = 'none';
+        };
+      }
     }
 
-    function updateBottomScrollText(index) {
-      const nowPlaying = titles[index];
-      const comingNext = titles[(index + 1) % titles.length];
-      bottomScrollText.textContent = `Now Playing: ${nowPlaying} — Coming Next: ${comingNext}`;
+    async function fetchChannel() {
+      try {
+        const response = await fetch('/channel.json?_=' + Date.now()); // cache-busting
+        return await response.json();
+      } catch (err) {
+        console.error("Failed to fetch channel.json", err);
+        return null;
+      }
     }
 
-    function syncPlayback() {
-      const { index, time } = getPlaybackPosition();
+    async function syncPlayback() {
+      const newChannel = await fetchChannel();
+      if (!newChannel || !newChannel.urls.length) return;
 
-      // Load stream if different
-      if (index !== currentIndex) {
+      const { index, time } = getPlaybackPosition(newChannel);
+      const newUrl = newChannel.urls[index];
+
+      if (index !== currentIndex || newUrl !== currentUrl) {
         currentIndex = index;
-        loadStream(playlist[index], time);
-        updateBottomScrollText(index);
-        return;
-      }
-
-      // Resync if time drift
-      if (Math.abs(video.currentTime - time) > 2) {
+        currentUrl = newUrl;
+        channel = newChannel;
+        loadStream(index, time);
+        updateBanner(index, newChannel);
+      } else if (Math.abs(video.currentTime - time) > 3) {
         video.currentTime = time;
       }
     }
 
-    // Start streaming and text updates
-    syncPlayback();
-    setInterval(syncPlayback, 1000);
+    function attachMuteButtonLogic() {
+      muteButton.textContent = video.muted ? '🔇' : '🔊';
+
+      muteButton.onclick = () => {
+        video.muted = !video.muted;
+        muteButton.textContent = video.muted ? '🔇' : '🔊';
+
+        if (!video.paused) {
+          video.play().catch(console.warn);
+        }
+      };
+    }
+
+    function attachSeekLock() {
+      video.addEventListener('seeking', () => {
+        clearTimeout(seekTimeout);
+        const { time: liveTime } = getPlaybackPosition(channel);
+        const currentTime = video.currentTime;
+        const diff = currentTime - liveTime;
+
+        console.log(`⏱️ Seeking diff: ${diff.toFixed(2)}s`);
+
+        if (diff > 3) {
+          console.log('⏩ Too far ahead — snapping back to live');
+          video.currentTime = liveTime;
+        } else if (diff < -3) {
+          console.log('⏪ Rewind detected — will return to live in 10s');
+          seekTimeout = setTimeout(() => {
+            console.log('🔁 Returning to live now');
+            video.currentTime = getPlaybackPosition(channel).time;
+          }, 10000);
+        }
+      });
+    }
+
+    function updateBanner(currentIndex, channel) {
+      const scrollText = document.getElementById('scrollText');
+      const currentTitle = channel.titles?.[currentIndex] || `Video ${currentIndex + 1}`;
+      const nextTitle = channel.titles?.[currentIndex + 1] || "Stay tuned...";
+      scrollText.textContent = `Now Playing: "${currentTitle}" — Coming Up Next: "${nextTitle}"`;
+    }
+
+    // Start sync loop every 5s
+    (function loop() {
+      syncPlayback();
+      setTimeout(loop, 5000);
+    })();
+
+    // Initial setup
+    attachMuteButtonLogic();
+    attachSeekLock();
   </script>
 </body>
 </html>

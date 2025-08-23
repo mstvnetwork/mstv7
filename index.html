@@ -34,43 +34,37 @@
             width: 100%;
             height: 100%;
             border: none;
-            pointer-events: none; /* Prevents direct interaction with the video iframe */
-        }
-
-        .unmute-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 3;
-            font-size: 1.8rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-shadow: 1px 1px 4px #000;
-            user-select: none;
-            border-radius: 8px;
-            transition: opacity 0.5s ease;
-        }
-
-        .unmute-overlay.hidden {
-            opacity: 0;
             pointer-events: none;
         }
 
+        /* 🔊 Unmute/mute button */
+        #unmute-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.8rem;
+            z-index: 5;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            padding: 8px;
+            user-select: none;
+            transition: background 0.3s ease;
+        }
+
+        #unmute-button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* 🔴 Updated scroll banner */
         .scroll-banner {
             position: absolute;
             bottom: 0;
             width: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            color: #fff;
-            font-size: 1rem;
-            padding: 5px 0;
+            background: #d00; /* Solid red */
+            color: #fff;       /* White text */
+            font-size: 1.2rem; /* Slightly larger */
+            padding: 8px 0;
             white-space: nowrap;
             overflow: hidden;
             z-index: 4;
@@ -93,8 +87,12 @@
     <div id="video-container">
         <div class="video-wrapper">
             <div id="player"></div>
-            <div class="unmute-overlay" id="unmute-overlay">🔊 Tap to Unmute</div>
-            <div class="scroll-banner"><span>📺 Live Now — No Skipping | Optimized for Chrome & iOS | Stay Tuned!</span></div>
+            <!-- 🔊 Mute/Unmute Button -->
+            <div id="unmute-button" title="Toggle Mute">🔇</div>
+            <!-- 🔴 Scroll Banner -->
+            <div class="scroll-banner">
+                <span>📺 This channel is compatible with Chrome based browsers to watch it uninterruptly use Chrome browser, stay tuned...!! </span>
+            </div>
         </div>
     </div>
 
@@ -163,7 +161,7 @@
                 playerVars: {
                     autoplay: 1,
                     mute: 1,
-                    controls: 0, // Keeps controls hidden to maintain pseudo-live effect
+                    controls: 0,
                     disablekb: 1,
                     modestbranding: 1,
                     rel: 0,
@@ -179,7 +177,6 @@
                             currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
                             player.loadVideoById({ videoId: playlist[currentVideoIndex].id, startSeconds: 0 });
                             if (isUnmuted) {
-                                // If already unmuted, maintain the state on the next video
                                 player.unMute();
                             }
                         }
@@ -191,16 +188,22 @@
             });
         }
 
-        // Unmute logic using the overlay
-        document.getElementById("unmute-overlay").addEventListener("click", () => {
-            if (player && typeof player.unMute === "function") {
+        // 🔊 Mute/Unmute toggle
+        document.getElementById("unmute-button").addEventListener("click", () => {
+            if (!player) return;
+
+            if (isUnmuted) {
+                player.mute();
+                isUnmuted = false;
+                document.getElementById("unmute-button").textContent = "🔇";
+            } else {
                 player.unMute();
                 isUnmuted = true;
-                document.getElementById("unmute-overlay").classList.add("hidden");
+                document.getElementById("unmute-button").textContent = "🔊";
             }
         });
 
-        // Load YouTube API
+        // 📺 Load YouTube IFrame API
         const tag = document.createElement("script");
         tag.src = "https://www.youtube.com/iframe_api";
         document.head.appendChild(tag);

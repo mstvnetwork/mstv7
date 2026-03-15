@@ -2,42 +2,123 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>M3U8 Web Player</title>
-    <!-- Include HLS.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live TV for VLC Mobile</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; background: #1a1a1a; color: white; }
-        .container { text-align: center; margin-top: 50px; }
-        video { width: 100%; max-width: 800px; border: 2px solid #444; border-radius: 8px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; text-align: center; }
+        .instruction-box { background: #333; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9em; }
+        .channel-btn { 
+            display: block; width: 100%; padding: 15px; margin: 10px 0; 
+            background: #ff8800; color: black; font-weight: bold; 
+            text-decoration: none; border-radius: 8px; border: none;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Colors Rishtey - Live Stream</h2>
-    <video id="video" controls></video>
-</div>
+    <h2>Select a Channel</h2>
+    
+    <div class="instruction-box">
+        Step 1: Download <b>VLC for Android/iOS</b>.<br>
+        Step 2: Tap a channel below to start watching instantly.
+    </div>
 
-<script>
-  var video = document.getElementById('video');
-  var videoSrc = 'http://103.175.73.12:8080/live/12/12_0.m3u8';
+    <div id="list"></div>
 
-  if (Hls.isSupported()) {
-    var hls = new Hls();
-    hls.loadSource(videoSrc);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-      video.play();
-    });
-  }
-  // For Safari/iOS which support HLS natively
-  else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = videoSrc;
-    video.addEventListener('loadedmetadata', function() {
-      video.play();
-    });
-  }
-</script>
+    <script>
+        // Your JSON list
+        const channels = [
+            { "name": "Colors Rishtey", "url": "http://103.175.73.12:8080/live/12/12_0.m3u8" }
+        ];
+
+        const listDiv = document.getElementById('list');
+
+        channels.forEach(ch => {
+            const btn = document.createElement('a');
+            btn.className = 'channel-btn';
+            btn.innerText = ch.name;
+            
+            // This triggers the VLC App Protocol
+            btn.href = "vlc://" + ch.url;
+            
+            listDiv.appendChild(btn);
+        });
+    </script>
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

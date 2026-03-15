@@ -1,211 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pseudo Live Stream</title>
+    <meta charset="UTF-8">
+    <title>M3U8 Web Player</title>
+    <!-- Include HLS.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #000;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        #video-container, #fallback-message {
-            display: none;
-        }
-
-        .video-wrapper {
-            position: relative;
-            width: 90vw;
-            max-width: 960px;
-            aspect-ratio: 16 / 9;
-            overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            pointer-events: none;
-        }
-
-        /* 🔊 Unmute/mute button */
-        #unmute-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.8rem;
-            z-index: 5;
-            cursor: pointer;
-            background: rgba(0,0,0,0.5);
-            border-radius: 50%;
-            padding: 8px;
-            user-select: none;
-            transition: background 0.3s ease;
-        }
-
-        #unmute-button:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        /* 🔴 Updated scroll banner */
-        .scroll-banner {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background: #d00; /* Solid red */
-            color: #fff;       /* White text */
-            font-size: 1.2rem; /* Slightly larger */
-            padding: 8px 0;
-            white-space: nowrap;
-            overflow: hidden;
-            z-index: 4;
-        }
-
-        .scroll-banner span {
-            display: inline-block;
-            padding-left: 100%;
-            animation: scroll-left 15s linear infinite;
-        }
-
-        @keyframes scroll-left {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
+        body { font-family: sans-serif; display: flex; justify-content: center; background: #1a1a1a; color: white; }
+        .container { text-align: center; margin-top: 50px; }
+        video { width: 100%; max-width: 800px; border: 2px solid #444; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-    <div id="video-container">
-        <div class="video-wrapper">
-            <div id="player"></div>
-            <!-- 🔊 Mute/Unmute Button -->
-            <div id="unmute-button" title="Toggle Mute">🔇</div>
-            <!-- 🔴 Scroll Banner -->
-            <div class="scroll-banner">
-                <span>📺 This channel is compatible with Chrome based browsers to watch it uninterruptly use Chrome browser, stay tuned...!! </span>
-            </div>
-        </div>
-    </div>
+<div class="container">
+    <h2>Colors Rishtey - Live Stream</h2>
+    <video id="video" controls></video>
+</div>
 
-    <div id="fallback-message">
-        <h2>⚠️ This livestream is only available in Google Chrome (desktop/Android) and Safari/Chrome on iOS.</h2>
-        <p>Please use one of these browsers to view the video.</p>
-    </div>
+<script>
+  var video = document.getElementById('video');
+  var videoSrc = 'http://103.175.73.12:8080/live/12/12_0.m3u8';
 
-    <script>
-        const playlist = [
-            { id: "MTp3ixLfbrI", duration: 4744 }
-            
-        ];
+  if (Hls.isSupported()) {
+    var hls = new Hls();
+    hls.loadSource(videoSrc);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+      video.play();
+    });
+  }
+  // For Safari/iOS which support HLS natively
+  else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = videoSrc;
+    video.addEventListener('loadedmetadata', function() {
+      video.play();
+    });
+  }
+</script>
 
-        const LIVE_START_TIME = new Date("2024-01-01T00:00:00Z").getTime();
-
-        let player;
-        let isUnmuted = false;
-
-        function isAllowedBrowser() {
-            const ua = navigator.userAgent;
-            const isAndroid = /Android/i.test(ua);
-            const isIOS = /iPhone|iPad|iPod/i.test(ua);
-            const isDesktopChrome = /Chrome\/[.0-9]* Safari\/[.0-9]*$/.test(ua) && !/Edg|OPR|Brave|Vivaldi/i.test(ua);
-            const isChromeOnAndroid = isAndroid && /Chrome\/[.0-9]* Mobile/i.test(ua) && !/EdgA|OPR|Brave|SamsungBrowser/i.test(ua);
-            const isChromeOniOS = isIOS && /CriOS/i.test(ua);
-            const isSafariOniOS = isIOS && /Version\/[\d\.]+.*Safari/.test(ua);
-            return isDesktopChrome || isChromeOnAndroid || isChromeOniOS || isSafariOniOS;
-        }
-
-        function onYouTubeIframeAPIReady() {
-            if (!isAllowedBrowser()) {
-                document.getElementById("fallback-message").style.display = "block";
-                return;
-            }
-
-            document.getElementById("video-container").style.display = "block";
-
-            const playlistDuration = playlist.reduce((acc, video) => acc + video.duration, 0);
-            const totalElapsedSeconds = Math.max(0, Math.floor((Date.now() - LIVE_START_TIME) / 1000));
-            const currentPositionInLoop = totalElapsedSeconds % playlistDuration;
-
-            let cumulativeDuration = 0;
-            let videoToPlay;
-            let startTime = 0;
-
-            for (let i = 0; i < playlist.length; i++) {
-                const video = playlist[i];
-                if (currentPositionInLoop < cumulativeDuration + video.duration) {
-                    currentVideoIndex = i;
-                    videoToPlay = video;
-                    startTime = currentPositionInLoop - cumulativeDuration;
-                    break;
-                }
-                cumulativeDuration += video.duration;
-            }
-
-            if (!videoToPlay) {
-                currentVideoIndex = 0;
-                videoToPlay = playlist[0];
-            }
-
-            player = new YT.Player("player", {
-                videoId: videoToPlay.id,
-                playerVars: {
-                    autoplay: 1,
-                    mute: 1,
-                    controls: 0,
-                    disablekb: 1,
-                    modestbranding: 1,
-                    rel: 0,
-                    start: startTime,
-                    playsinline: 1
-                },
-                events: {
-                    onReady: (event) => {
-                        event.target.playVideo().catch(e => console.log("Play failed due to autoplay policy."));
-                    },
-                    onStateChange: (event) => {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
-                            player.loadVideoById({ videoId: playlist[currentVideoIndex].id, startSeconds: 0 });
-                            if (isUnmuted) {
-                                player.unMute();
-                            }
-                        }
-                    },
-                    onError: (event) => {
-                        console.error("YouTube Player Error:", event.data);
-                    }
-                }
-            });
-        }
-
-        // 🔊 Mute/Unmute toggle
-        document.getElementById("unmute-button").addEventListener("click", () => {
-            if (!player) return;
-
-            if (isUnmuted) {
-                player.mute();
-                isUnmuted = false;
-                document.getElementById("unmute-button").textContent = "🔇";
-            } else {
-                player.unMute();
-                isUnmuted = true;
-                document.getElementById("unmute-button").textContent = "🔊";
-            }
-        });
-
-        // 📺 Load YouTube IFrame API
-        const tag = document.createElement("script");
-        tag.src = "https://www.youtube.com/iframe_api";
-        document.head.appendChild(tag);
-    </script>
 </body>
 </html>

@@ -25,6 +25,7 @@
 
     <div id="list"></div>
 <script>
+    // Your JSON data
     const channels = [
         { "name": "Colors Rishtey", "url": "https://criccoder.pages.dev/astro.m3u8" }
     ];
@@ -34,16 +35,18 @@
     channels.forEach(ch => {
         const btn = document.createElement('a');
         btn.className = 'channel-btn';
-        btn.innerText = ch.name;
+        btn.innerText = "Play in MX Player: " + ch.name;
         
-        // This is the most stable intent format for VLC on Android
-        // It tells VLC to treat the URL as a video stream directly
-        const vlcIntent = `intent://${ch.url.replace(/^https?:\/\//, '')}#Intent;scheme=http;type=video/*;package=org.videolan.vlc;S.title=${encodeURIComponent(ch.name)};end`;
+        // MX Player Intent Format
+        // package=com.mxtech.videoplayer.ad is for the Free version
+        // S.title sets the name inside the player
+        const mxIntent = `intent:${ch.url}#Intent;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(ch.name)};end`;
         
-        btn.href = vlcIntent;
+        btn.href = mxIntent;
         listDiv.appendChild(btn);
     });
 </script>
+
 
 
 

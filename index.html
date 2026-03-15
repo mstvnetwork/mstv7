@@ -36,13 +36,15 @@
         btn.className = 'channel-btn';
         btn.innerText = ch.name;
         
-        // This is the 'Intent' link that tells Android to open VLC directly
-        // It bypasses the download prompt entirely
-        btn.href = `intent://${ch.url.replace(/^https?:\/\//, '')}#Intent;scheme=http;package=org.videolan.vlc;S.title=${encodeURIComponent(ch.name)};end`;
+        // This is the most stable intent format for VLC on Android
+        // It tells VLC to treat the URL as a video stream directly
+        const vlcIntent = `intent://${ch.url.replace(/^https?:\/\//, '')}#Intent;scheme=http;type=video/*;package=org.videolan.vlc;S.title=${encodeURIComponent(ch.name)};end`;
         
+        btn.href = vlcIntent;
         listDiv.appendChild(btn);
     });
 </script>
+
 
 
 </body>

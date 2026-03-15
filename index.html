@@ -24,7 +24,6 @@
     </div>
 
     <div id="list"></div>
-
 <script>
     const channels = [
         { "name": "Colors Rishtey", "url": "https://103.175.73.12:8080/live/12/12_0.m3u8" }
@@ -33,19 +32,13 @@
     const listDiv = document.getElementById('list');
 
     channels.forEach(ch => {
-        const btn = document.createElement('button');
+        const btn = document.createElement('a');
         btn.className = 'channel-btn';
-        btn.innerText = "Click to Watch: " + ch.name;
+        btn.innerText = ch.name;
         
-        btn.onclick = function() {
-            // This creates a "Playable File" instantly
-            const m3uContent = `#EXTM3U\n#EXTINF:-1,${ch.name}\n${ch.url}`;
-            const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = ch.name + ".m3u"; // This file extension triggers VLC
-            link.click();
-        };
+        // This is the 'Intent' link that tells Android to open VLC directly
+        // It bypasses the download prompt entirely
+        btn.href = `intent://${ch.url.replace(/^https?:\/\//, '')}#Intent;scheme=http;package=org.videolan.vlc;S.title=${encodeURIComponent(ch.name)};end`;
         
         listDiv.appendChild(btn);
     });

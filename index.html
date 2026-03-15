@@ -25,25 +25,32 @@
 
     <div id="list"></div>
 
-    <script>
-        // Your JSON list
-        const channels = [
-            { "name": "Colors Rishtey", "url": "http://103.175.73.12:8080/live/12/12_0.m3u8" }
-        ];
+<script>
+    const channels = [
+        { "name": "Colors Rishtey", "url": "https://103.175.73.12:8080/live/12/12_0.m3u8" }
+    ];
 
-        const listDiv = document.getElementById('list');
+    const listDiv = document.getElementById('list');
 
-        channels.forEach(ch => {
-            const btn = document.createElement('a');
-            btn.className = 'channel-btn';
-            btn.innerText = ch.name;
-            
-            // This triggers the VLC App Protocol
-            btn.href = "vlc://" + ch.url;
-            
-            listDiv.appendChild(btn);
-        });
-    </script>
+    channels.forEach(ch => {
+        const btn = document.createElement('button');
+        btn.className = 'channel-btn';
+        btn.innerText = "Click to Watch: " + ch.name;
+        
+        btn.onclick = function() {
+            // This creates a "Playable File" instantly
+            const m3uContent = `#EXTM3U\n#EXTINF:-1,${ch.name}\n${ch.url}`;
+            const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = ch.name + ".m3u"; // This file extension triggers VLC
+            link.click();
+        };
+        
+        listDiv.appendChild(btn);
+    });
+</script>
+
 
 </body>
 </html>

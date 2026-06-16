@@ -15,8 +15,15 @@ const IFRAME_RESYNC   = 8;      // seconds drift before iframe reload
 // ── URL type detection ────────────────────────────────────────────
 // Returns 'iframe' if URL is a web player page, 'hls' or 'mp4' otherwise.
 function detectType(item) {
+
   if (item.type === 'iframe') return 'iframe';
+  if (item.type === 'mp4') return 'mp4';
+  if (item.type === 'hls') return 'hls';
+
   const url = item.url || '';
+
+  ...
+}
   // Direct stream indicators
   if (url.includes('.m3u8')) return 'hls';
   if (url.includes('.mp4'))  return 'mp4';

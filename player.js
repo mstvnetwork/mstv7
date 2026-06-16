@@ -22,7 +22,7 @@ function detectType(item) {
 
   const url = item.url || '';
 
-  ...
+  
 }
   // Direct stream indicators
   if (url.includes('.m3u8')) return 'hls';

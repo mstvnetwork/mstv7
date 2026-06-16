@@ -22,6 +22,26 @@ function detectType(item) {
 
   const url = item.url || '';
 
+  if (url.includes('.m3u8')) return 'hls';
+  if (url.includes('.mp4'))  return 'mp4';
+
+  if (
+    url.includes('/player') ||
+    url.includes('?url=') ||
+    url.includes('?src=') ||
+    url.includes('?stream=') ||
+    url.includes('?file=') ||
+    url.includes('?link=') ||
+    url.includes('?v=') ||
+    url.includes('embed') ||
+    url.includes('iframe') ||
+    item.type === 'embed'
+  ) return 'iframe';
+
+  return url.match(/\.(m3u8|mp4|webm|ogg|mkv)(\?|$)/i)
+    ? 'mp4'
+    : 'iframe';
+}
   
 }
   // Direct stream indicators

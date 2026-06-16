@@ -15,15 +15,14 @@ const IFRAME_RESYNC   = 8;      // seconds drift before iframe reload
 // ── URL type detection ────────────────────────────────────────────
 // Returns 'iframe' if URL is a web player page, 'hls' or 'mp4' otherwise.
 function detectType(item) {
+  const url = item.url || '';
 
   if (item.type === 'iframe') return 'iframe';
   if (item.type === 'mp4') return 'mp4';
   if (item.type === 'hls') return 'hls';
 
-  const url = item.url || '';
-
   if (url.includes('.m3u8')) return 'hls';
-  if (url.includes('.mp4'))  return 'mp4';
+  if (url.includes('.mp4')) return 'mp4';
 
   if (
     url.includes('/player') ||
@@ -34,15 +33,14 @@ function detectType(item) {
     url.includes('?link=') ||
     url.includes('?v=') ||
     url.includes('embed') ||
-    url.includes('iframe') ||
-    item.type === 'embed'
-  ) return 'iframe';
+    url.includes('iframe')
+  ) {
+    return 'iframe';
+  }
 
   return url.match(/\.(m3u8|mp4|webm|ogg|mkv)(\?|$)/i)
     ? 'mp4'
     : 'iframe';
-}
-  
 }
   // Direct stream indicators
   if (url.includes('.m3u8')) return 'hls';

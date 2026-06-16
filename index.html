@@ -1,1 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Linear TV</title>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<style>
+html,
+body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    background:#000;
+    overflow:hidden;
+}
+
+body{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.player-wrap{
+    width:100vw;
+    max-width:100vw;
+    margin:0;
+    padding:0;
+}
+
+.video-container{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+}
+
+video,
+iframe{
+    width:100%;
+    height:100%;
+    border:0;
+    display:block;
+}
+
+/* Loader */
+
+.loader{
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:rgba(0,0,0,.6);
+    z-index:50;
+}
+
+.loader.hidden{
+    display:none;
+}
+
+/* Custom Controls */
+
+.custom-controls{
+    position:absolute;
+    left:50%;
+    bottom:20px;
+    transform:translateX(-50%);
+    display:flex;
+    gap:12px;
+    z-index:9999;
+    opacity:1;
+    transition:opacity .3s;
+}
+
+.custom-controls.hide{
+    opacity:0;
+}
+
+.custom-controls button{
+    width:52px;
+    height:52px;
+    border:none;
+    border-radius:50%;
+    background:rgba(0,0,0,.75);
+    color:#fff;
+    font-size:20px;
+    cursor:pointer;
+    backdrop-filter:blur(4px);
+}
+
+.custom-controls button:hover{
+    background:rgba(255,255,255,.15);
+}
+
+/* Hidden UI */
+
+#nowTitle,
+#clock,
+#clockDate,
+#errorMsg,
+.controls,
+.progress,
+#statusText,
+#statusOffset,
+#scheduleList,
+#syncToast,
+#updateToast,
+h3{
+    display:none !important;
+}
+
+.vol-overlay{
+    display:none;
+}
+</style>
+</head>
+<body>
+
+<div class="player-wrap">
+
+    <!-- Hidden elements still required by player.js -->
+    <h2 id="nowTitle" style="display:none;">Loading...</h2>
+
+    <div id="clock" style="display:none;"></div>
+    <div id="clockDate" style="display:none;"></div>
+
+    <div class="video-container" id="videoContainer">
+
+        <video
+            id="videoPlayer"
+            playsinline
+            controlslist="nodownload">
+        </video>
+
+        <iframe
+            id="iframePlayer"
+            style="display:none;"
+            allowfullscreen>
+        </iframe>
+
+        <div id="loader" class="loader">
+            Loading...
+        </div>
+
+        <div id="volOverlay" class="vol-overlay">
+            Volume controlled by embedded player
+        </div>
+
+        <!-- Custom Controls -->
+
+        <div class="custom-controls" id="customControls">
+
+            <button id="playPauseBtn">▶</button>
+
+            <button id="muteBtn">🔊</button>
+
+            <button id="fullscreenBtn">⛶</button>
+
+        </div>
+
+    </div>
+
+    <!-- Hidden elements required by player.js -->
+
+    <div id="errorMsg"></div>
+
+    <div class="controls" style="display:none;">
+        <button id="btnPlay">⏸</button>
+
+        <input
+            id="volSlider"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.8">
+    </div>
+
+    <div class="progress" style="display:none;">
+        <div id="progressFill"></div>
+    </div>
+
+    <div id="statusText"></div>
+    <div id="statusOffset"></div>
+
+    <h3>Schedule</h3>
+
+    <div id="scheduleList"></div>
+
+</div>
+
+<div id="syncToast"></div>
+<div id="updateToast"></div>
+
+<script src="./player.js"></script>
+
+<script>
+
+initPlayer({
+
+    videoId: 'videoPlayer',
+    iframeId: 'iframePlayer',
+
+    loaderId: 'loader',
+    errorId: 'errorMsg',
+
+    btnPlayId: 'btnPlay',
+    volSliderId: 'volSlider',
+
+    progressFillId: 'progressFill',
+    scheduleListId: 'scheduleList',
+
+    syncToastId: 'syncToast',
+    updateToastId: 'updateToast',
+
+    statusTextId: 'statusText',
+    statusOffsetId: 'statusOffset',
+
+    nowTitleId: 'nowTitle',
+
+    volOverlayId: 'volOverlay',
+
+    showClock: false,
+
+    clockId: 'clock',
+    clockDateId: 'clockDate'
+
+});
+
+/* Custom Controls */
+
+const video = document.getElementById('videoPlayer');
+const container = document.getElementById('videoContainer');
+
+const playPauseBtn = document.getElementById('playPauseBtn');
+const muteBtn = document.getElementById('muteBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+playPauseBtn.addEventListener('click', () => {
+
+    if(video.paused){
+        video.play();
+    }else{
+        video.pause();
+    }
+
+});
+
+video.addEventListener('play', () => {
+    playPauseBtn.textContent = '❚❚';
+});
+
+video.addEventListener('pause', () => {
+    playPauseBtn.textContent = '▶';
+});
+
+muteBtn.addEventListener('click', () => {
+
+    video.muted = !video.muted;
+
+    muteBtn.textContent =
+        video.muted ? '🔇' : '🔊';
+
+});
+
+fullscreenBtn.addEventListener('click', () => {
+
+    if(!document.fullscreenElement){
+
+        container.requestFullscreen?.();
+
+    }else{
+
+        document.exitFullscreen?.();
+
+    }
+
+});
+
+/* Auto-hide controls */
+
+const controls = document.getElementById('customControls');
+
+let hideTimer;
+
+function showControls(){
+
+    controls.classList.remove('hide');
+
+    clearTimeout(hideTimer);
+
+    hideTimer = setTimeout(() => {
+
+        controls.classList.add('hide');
+
+    },3000);
+}
+
+container.addEventListener('mousemove', showControls);
+container.addEventListener('touchstart', showControls);
+
+showControls();
+
+</script>
+
+</body>
+</html>

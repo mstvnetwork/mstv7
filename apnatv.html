@@ -38,7 +38,7 @@
     position:absolute;
     inset:0;
   }
-  .stage iframe{
+  .stage iframe, .stage video{
     position:absolute;
     inset:0;
     width:100%;
@@ -48,7 +48,7 @@
     transition: opacity 700ms ease-in-out;
     pointer-events:none; /* block seeking/clicks on embedded controls */
   }
-  .stage iframe.active{
+  .stage iframe.active, .stage video.active{
     opacity:1;
   }
 
@@ -446,7 +446,8 @@
     if (!playlist.length){ epgTrack.innerHTML = ''; return; }
     const build = () => playlist.map((item, i) => {
       const tag = i === currentIndex ? '<span class="epg-now">NOW</span>' : '';
-      return `<span class="epg-item">${tag}${item.title || 'Untitled'}<span class="epg-sep">•</span></span>`;
+      const label = item.title || (item.type === 'mp4' ? 'Video Segment' : 'Live Segment');
+      return `<span class="epg-item">${tag}${label}<span class="epg-sep">•</span></span>`;
     }).join('');
     epgTrack.innerHTML = build() + build();
     const trackWidth = epgTrack.scrollWidth / 2;
@@ -527,14 +528,43 @@
     }
   }
 
-  function makeIframe(item, withSound){
+  // duration can arrive as `duration` or `duration_seconds`
+  function getDuration(item){
+    return item.duration || item.duration_seconds || 30;
+  }
+
+  function makeMediaEl(item, withSound){
+    // type "mp4" (or any direct video file) -> native <video>, not iframe
+    if (item.type === 'mp4' || item.type === 'video'){
+      const v = document.createElement('video');
+      v.src = item.url;
+      v.autoplay = true;
+      v.muted = !withSound;
+      v.playsInline = true;
+      v.controls = false;
+      v.disablePictureInPicture = true;
+      v.style.position = 'absolute';
+      v.style.inset = '0';
+      v.style.width = '100%';
+      v.style.height = '100%';
+      v.style.objectFit = 'contain';
+      v.style.background = '#000';
+      v.dataset.itemId = item.id || item.url;
+      v.play().catch(()=>{ /* wait for gesture, tap-hint already covers this */ });
+      v.addEventListener('error', () => {
+        console.warn('Apna Tv: video failed to load, skipping to next segment.', item.url);
+        advanceToNext();
+      });
+      return v;
+    }
+    // default: iframe embed
     const f = document.createElement('iframe');
     f.src = buildIframeSrc(item.url, withSound);
     f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
     f.setAttribute('allowfullscreen', 'true');
     f.setAttribute('frameborder', '0');
     f.setAttribute('scrolling', 'no');
-    f.dataset.itemId = item.id;
+    f.dataset.itemId = item.id || item.url;
     return f;
   }
 
@@ -548,7 +578,7 @@
     reconnectEl.classList.remove('show');
 
     const withSound = userInteracted;
-    const incoming = makeIframe(item, withSound);
+    const incoming = makeMediaEl(item, withSound);
     stage.appendChild(incoming);
 
     // force layout then fade in
@@ -559,7 +589,7 @@
     });
 
     // remove old iframes after fade completes (keep only the new one)
-    const olds = Array.from(stage.querySelectorAll('iframe')).filter(f => f !== incoming);
+    const olds = Array.from(stage.querySelectorAll('iframe, video')).filter(f => f !== incoming);
     setTimeout(() => {
       olds.forEach(f => f.remove());
     }, SWITCH_FADE_MS + 50);
@@ -568,8 +598,8 @@
     segmentStartAt = Date.now();
     preloadedNextIndex = -1;
 
-    scheduleAdvance(item.duration);
-    animateProgress(item.duration);
+    scheduleAdvance(getDuration(item));
+    animateProgress(getDuration(item));
     renderEPG();
   }
 
@@ -592,7 +622,7 @@
     if (nextIndex === preloadedNextIndex) return;
     preloadedNextIndex = nextIndex;
     const item = playlist[nextIndex];
-    const pre = makeIframe(item, userInteracted);
+    const pre = makeMediaEl(item, userInteracted);
     pre.dataset.preload = "true";
     pre.style.opacity = "0";
     stage.appendChild(pre);
@@ -603,18 +633,19 @@
     const nextIndex = (currentIndex + 1) % playlist.length;
 
     // If we already preloaded this exact segment, just activate it
-    const preloaded = stage.querySelector(`iframe[data-preload="true"]`);
-    if (preloaded && playlist[nextIndex].id === preloaded.dataset.itemId){
+    const preloaded = stage.querySelector(`[data-preload="true"]`);
+    const nextItemKey = playlist[nextIndex].id || playlist[nextIndex].url;
+    if (preloaded && nextItemKey === preloaded.dataset.itemId){
       preloaded.removeAttribute('data-preload');
-      const olds = Array.from(stage.querySelectorAll('iframe')).filter(f => f !== preloaded);
+      const olds = Array.from(stage.querySelectorAll('iframe, video')).filter(f => f !== preloaded);
       requestAnimationFrame(() => preloaded.classList.add('active'));
       setTimeout(() => olds.forEach(f => f.remove()), SWITCH_FADE_MS + 50);
 
       currentIndex = nextIndex;
       segmentStartAt = Date.now();
       preloadedNextIndex = -1;
-      scheduleAdvance(playlist[nextIndex].duration);
-      animateProgress(playlist[nextIndex].duration);
+      scheduleAdvance(getDuration(playlist[nextIndex]));
+      animateProgress(getDuration(playlist[nextIndex]));
       renderEPG();
       return;
     }
@@ -649,7 +680,9 @@
       const res = await fetch(PLAYLIST_URL + '?_=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error('bad status ' + res.status);
       const data = await res.json();
-      const hash = JSON.stringify(data.items) + data.updated;
+      // Support both a bare array [...] and a wrapped { items: [...] } format
+      const itemsArray = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+      const hash = JSON.stringify(itemsArray) + (data.updated || '');
 
       if (hash === lastPlaylistHash){
         reconnectEl.classList.remove('show');
@@ -660,7 +693,7 @@
       lastPlaylistHash = hash;
 
       const previousItem = playlist[currentIndex];
-      playlist = Array.isArray(data.items) ? data.items : [];
+      playlist = itemsArray;
 
       if (!playlist.length) return;
 
@@ -672,8 +705,9 @@
       }
 
       // Try to keep playing the same item if it still exists in new list
-      const stillExistsIndex = previousItem
-        ? playlist.findIndex(p => p.id === previousItem.id)
+      const prevKey = previousItem ? (previousItem.id || previousItem.url) : null;
+      const stillExistsIndex = prevKey
+        ? playlist.findIndex(p => (p.id || p.url) === prevKey)
         : -1;
 
       if (stillExistsIndex > -1){
@@ -726,4 +760,4 @@
 </script>
 
 </body>
-  </html>
+</html>

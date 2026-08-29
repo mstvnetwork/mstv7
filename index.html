@@ -267,12 +267,14 @@
       </div>
     </div>
   </div>     
-  <script>
+      <script>
     const PLAYLIST_URL = './playlist.json';
+    const FALLBACK_VIDEO_URL = './fallback.mp4';
     const FETCH_INTERVAL_MS = 2000;
     const SYNC_CHECK_INTERVAL_MS = 500;
     const MAX_ALLOWED_DRIFT_SEC = 0.5;
     const UI_HIDE_TIMEOUT_MS = 3000;
+    const BUFFER_RECOVERY_TIMEOUT_MS = 3000; // 3-second buffer tolerance before fallback
 
     const container = document.getElementById('player-container');
     const videoElem = document.getElementById('native-player');
@@ -294,9 +296,13 @@
     let playlist = [];
     let hlsInstance = null;
     let currentItem = null;
-    let currentItemStartTime = null; // Anchors active video playback against additions
+    let currentItemStartTime = null;
     let totalPlaylistDuration = 0;
     let uiHideTimer = null;
+    
+    let isFallbackActive = false;
+    let bufferTimeoutTimer = null;
+    let consecutiveFetchFailures = 0;
 
     videoElem.muted = true;
 
@@ -307,7 +313,10 @@
       loaderElem.classList.remove('ui-hidden');
     }
 
-    videoElem.addEventListener('playing', hideLoader);
+    videoElem.addEventListener('playing', () => {
+      clearBufferTimeout();
+      hideLoader();
+    });
     videoElem.addEventListener('waiting', showLoader);
     videoElem.addEventListener('seeking', showLoader);
     videoElem.addEventListener('seeked', () => {
@@ -316,15 +325,90 @@
 
     iframeElem.addEventListener('load', hideLoader);
 
-    // --- 1. Fetching Logic (Preserves Active Anchor) ---
+    // --- Buffer & Network Failure Tolerances ---
+    function clearBufferTimeout() {
+      if (bufferTimeoutTimer) {
+        clearTimeout(bufferTimeoutTimer);
+        bufferTimeoutTimer = null;
+      }
+    }
+
+    function scheduleFallbackIfUnrecovered(reasonMessage) {
+      if (isFallbackActive || bufferTimeoutTimer || document.hidden) return;
+      
+      // Wait for buffer tolerance window to allow natural network recovery
+      bufferTimeoutTimer = setTimeout(() => {
+        triggerFallback(reasonMessage);
+      }, BUFFER_RECOVERY_TIMEOUT_MS);
+    }
+
+    // --- Fallback Mechanism ---
+    function triggerFallback(reasonMessage) {
+      if (isFallbackActive) return;
+      clearBufferTimeout();
+      isFallbackActive = true;
+
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+
+      iframeElem.style.display = 'none';
+      iframeElem.src = '';
+
+      videoElem.style.display = 'block';
+      videoElem.loop = true;
+
+      const fullFallbackPath = new URL(FALLBACK_VIDEO_URL, window.location.href).href;
+      if (videoElem.src !== fullFallbackPath) {
+        videoElem.src = FALLBACK_VIDEO_URL;
+      }
+
+      videoElem.play().catch(() => {});
+      hideLoader();
+      debugElem.textContent = reasonMessage ? `Now Playing : ${reasonMessage}` : `Now Playing : Fallback Stream`;
+    }
+
+    // Native Media Error & Stalled Hooks (Tolerant to Small Dips)
+    videoElem.addEventListener('error', () => {
+      scheduleFallbackIfUnrecovered('Playback Error');
+    });
+
+    videoElem.addEventListener('stalled', () => {
+      scheduleFallbackIfUnrecovered('Stream Stalled');
+    });
+
+    // --- Page Visibility Listener (Prevents Background Tab Fallback) ---
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        // Tab is active again: Clear false flags and resync instantly
+        clearBufferTimeout();
+        consecutiveFetchFailures = 0;
+        if (playlist.length > 0) {
+          syncEngine();
+        } else {
+          fetchPlaylist();
+        }
+      }
+    });
+
+    // --- 1. Fetching Logic (With Failure Thresholds) ---
     async function fetchPlaylist() {
+      // Don't flag errors if tab is running throttled in background
+      if (document.hidden) return;
+
       try {
         const response = await fetch(`${PLAYLIST_URL}?cachebuster=${Date.now()}`, { cache: 'no-store' });
         if (!response.ok) {
-          debugElem.textContent = `Now Playing : Error (HTTP ${response.status})`;
+          consecutiveFetchFailures++;
+          if (consecutiveFetchFailures >= 3) {
+            triggerFallback(`Playlist Fetch Error (HTTP ${response.status})`);
+          }
           return;
         }
+        
         const data = await response.json();
+        consecutiveFetchFailures = 0; // Reset network error counter
         
         if (Array.isArray(data) && data.length > 0) {
           if (JSON.stringify(data) !== JSON.stringify(playlist)) {
@@ -335,15 +419,19 @@
               totalPlaylistDuration = newTotalDuration;
               syncEngine();
             } else {
-              // Gracefully accept new entries without shifting active video offset
               playlist = data;
               totalPlaylistDuration = newTotalDuration;
               console.log("Playlist updated in background safely.");
             }
           }
+        } else {
+          triggerFallback('Empty Playlist');
         }
       } catch (e) {
-        debugElem.textContent = `Now Playing : Fetch Error`;
+        consecutiveFetchFailures++;
+        if (consecutiveFetchFailures >= 3) {
+          triggerFallback('Playlist Network Error');
+        }
       }
     }
     setInterval(fetchPlaylist, FETCH_INTERVAL_MS);
@@ -355,13 +443,11 @@
       
       const epochSeconds = Date.now() / 1000;
 
-      // If a video is actively playing, evaluate seek position against its anchored start time
       if (currentItem && currentItemStartTime !== null) {
         const elapsed = epochSeconds - currentItemStartTime;
         const currentDuration = currentItem.duration_seconds || 0;
 
         if (elapsed < currentDuration) {
-          // Find index of currentItem inside updated playlist (if present)
           let idx = playlist.findIndex(i => i.url === currentItem.url);
           return {
             itemIndex: idx >= 0 ? idx : 0,
@@ -371,7 +457,6 @@
         }
       }
 
-      // Compute standard loop sync when selecting a new video transition
       const currentLoopTime = epochSeconds % totalPlaylistDuration;
 
       let accumulatedTime = 0;
@@ -399,15 +484,27 @@
 
     // --- 3. Strict Live Drift Lock & Sync Engine ---
     function syncEngine() {
+      // Pause sync updates if tab is invisible to save performance
+      if (document.hidden) return;
+
       const state = getGlobalTimeState();
-      if (!state) return;
+      if (!state) {
+        if (playlist.length === 0) triggerFallback('No Items Available');
+        return;
+      }
 
       const { item, seekPosition } = state;
-      const displayName = item.name ? item.name : `Video ${state.itemIndex + 1}`;
 
+      // Exit fallback mode as soon as feed is restored
+      if (isFallbackActive) {
+        isFallbackActive = false;
+        videoElem.loop = false;
+        currentItem = null; 
+      }
+
+      const displayName = item.name ? item.name : `Video ${state.itemIndex + 1}`;
       debugElem.textContent = `Now Playing : ${displayName}`;
 
-      // Initialize initial stream
       if (!currentItem) {
         currentItem = item;
         currentItemStartTime = state.calculatedStartTime || (Date.now() / 1000 - seekPosition);
@@ -416,7 +513,6 @@
         return;
       }
 
-      // Handle video transitions smoothly
       if (currentItem.url !== item.url) {
         currentItem = item;
         currentItemStartTime = state.calculatedStartTime || (Date.now() / 1000 - seekPosition);
@@ -425,7 +521,6 @@
         return;
       }
 
-      // Maintain drift bounds without jumping during playlist updates
       if (item.type === 'mp4' || item.type === 'm3u8') {
         const drift = Math.abs(videoElem.currentTime - seekPosition);
         if (drift > MAX_ALLOWED_DRIFT_SEC) {
@@ -446,6 +541,8 @@
         hlsInstance = null;
       }
 
+      videoElem.loop = false;
+
       if (item.type === 'iframe') {
         videoElem.style.display = 'none';
         videoElem.pause();
@@ -464,8 +561,20 @@
 
             hlsInstance.on(Hls.Events.ERROR, (event, data) => {
               if (data.fatal) {
-                debugElem.textContent = `Now Playing : Stream Error (${data.type})`;
-                hideLoader();
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    // Attempt soft recovery first before forcing fallback
+                    hlsInstance.startLoad();
+                    scheduleFallbackIfUnrecovered(`Stream Network Error`);
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    hlsInstance.recoverMediaError();
+                    scheduleFallbackIfUnrecovered(`Stream Media Error`);
+                    break;
+                  default:
+                    triggerFallback(`Fatal Stream Error (${data.type})`);
+                    break;
+                }
               }
             });
 
@@ -556,6 +665,7 @@
 
     // Anti-Bypass Seeking Revert Logic
     videoElem.addEventListener('seeking', () => {
+      if (isFallbackActive) return;
       const state = getGlobalTimeState();
       if (state && (state.item.type === 'mp4' || state.item.type === 'm3u8')) {
         const drift = Math.abs(videoElem.currentTime - state.seekPosition);
@@ -564,7 +674,6 @@
         }
       }
     });
-  </script>                      
+      </script>
 </body>
-</html>                             
-                                 
+</html>

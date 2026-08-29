@@ -267,7 +267,7 @@
       </div>
     </div>
   </div>     
- <script>
+  <script>
     const PLAYLIST_URL = './playlist.json';
     const FETCH_INTERVAL_MS = 2000;
     const SYNC_CHECK_INTERVAL_MS = 500;
@@ -294,6 +294,7 @@
     let playlist = [];
     let hlsInstance = null;
     let currentItem = null;
+    let currentItemStartTime = null; // Anchors active video playback against additions
     let totalPlaylistDuration = 0;
     let uiHideTimer = null;
 
@@ -315,7 +316,7 @@
 
     iframeElem.addEventListener('load', hideLoader);
 
-    // --- 1. Aggressive JSON Fetching (Safely Updated) ---
+    // --- 1. Fetching Logic (Preserves Active Anchor) ---
     async function fetchPlaylist() {
       try {
         const response = await fetch(`${PLAYLIST_URL}?cachebuster=${Date.now()}`, { cache: 'no-store' });
@@ -329,14 +330,12 @@
           if (JSON.stringify(data) !== JSON.stringify(playlist)) {
             const newTotalDuration = data.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
 
-            // If nothing is playing yet, initialize immediately
             if (!currentItem) {
               playlist = data;
               totalPlaylistDuration = newTotalDuration;
               syncEngine();
             } else {
-              // Background update: safely update playlist reference and recalculate total duration 
-              // without resetting the active video playback pointer or forcing an immediate timeline snap.
+              // Gracefully accept new entries without shifting active video offset
               playlist = data;
               totalPlaylistDuration = newTotalDuration;
               console.log("Playlist updated in background safely.");
@@ -350,11 +349,29 @@
     setInterval(fetchPlaylist, FETCH_INTERVAL_MS);
     fetchPlaylist();
 
-    // --- 2. Live Broadcast Time Logic ---
+    // --- 2. Anchor-Aware Live Broadcast Time Logic ---
     function getGlobalTimeState() {
       if (!totalPlaylistDuration || totalPlaylistDuration === 0) return null;
       
       const epochSeconds = Date.now() / 1000;
+
+      // If a video is actively playing, evaluate seek position against its anchored start time
+      if (currentItem && currentItemStartTime !== null) {
+        const elapsed = epochSeconds - currentItemStartTime;
+        const currentDuration = currentItem.duration_seconds || 0;
+
+        if (elapsed < currentDuration) {
+          // Find index of currentItem inside updated playlist (if present)
+          let idx = playlist.findIndex(i => i.url === currentItem.url);
+          return {
+            itemIndex: idx >= 0 ? idx : 0,
+            item: currentItem,
+            seekPosition: Math.max(0, elapsed)
+          };
+        }
+      }
+
+      // Compute standard loop sync when selecting a new video transition
       const currentLoopTime = epochSeconds % totalPlaylistDuration;
 
       let accumulatedTime = 0;
@@ -365,21 +382,22 @@
           return {
             itemIndex: i,
             item: item,
-            seekPosition: currentLoopTime - accumulatedTime
+            seekPosition: currentLoopTime - accumulatedTime,
+            calculatedStartTime: epochSeconds - (currentLoopTime - accumulatedTime)
           };
         }
         accumulatedTime += itemDuration;
       }
       
-      // Fallback to first item if time overflows slightly due to float precision
       return {
         itemIndex: 0,
         item: playlist[0],
-        seekPosition: 0
+        seekPosition: 0,
+        calculatedStartTime: epochSeconds
       };
     }
 
-    // --- 3. Strict Live Drift Lock & Top Box Updater ---
+    // --- 3. Strict Live Drift Lock & Sync Engine ---
     function syncEngine() {
       const state = getGlobalTimeState();
       if (!state) return;
@@ -389,23 +407,25 @@
 
       debugElem.textContent = `Now Playing : ${displayName}`;
 
-      // If we don't have an active stream running, start it
+      // Initialize initial stream
       if (!currentItem) {
         currentItem = item;
+        currentItemStartTime = state.calculatedStartTime || (Date.now() / 1000 - seekPosition);
         showLoader();
         loadMediaSource(item, seekPosition);
         return;
       }
 
-      // If the current playing video URL changes by clock rollover or active slot replacement:
+      // Handle video transitions smoothly
       if (currentItem.url !== item.url) {
         currentItem = item;
+        currentItemStartTime = state.calculatedStartTime || (Date.now() / 1000 - seekPosition);
         showLoader();
         loadMediaSource(item, seekPosition);
         return;
       }
 
-      // Maintain live-sync drift for active streams (skip drift adjustment if user is interacting with an iframe)
+      // Maintain drift bounds without jumping during playlist updates
       if (item.type === 'mp4' || item.type === 'm3u8') {
         const drift = Math.abs(videoElem.currentTime - seekPosition);
         if (drift > MAX_ALLOWED_DRIFT_SEC) {
@@ -470,7 +490,7 @@
       }
     }
 
-    // --- 5. Auto Fade Control Overlay (status box stays visible always) ---
+    // --- 5. Auto Fade Control Overlay ---
     function showControls() {
       controlsOverlay.classList.remove('ui-hidden');
       
@@ -544,7 +564,7 @@
         }
       }
     });
-  </script>
+  </script>                      
 </body>
 </html>                             
                                  

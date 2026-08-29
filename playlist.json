@@ -8,16 +8,10 @@
     "url":"https://xtremplay.com/api/proxy?url=https%3A%2F%2Fsi.videoapne.to%2Fhls%2Fbdohwhlc7bboxuzvta774gqj2yygdguznxjvgirycorwn4wqyhjw6edhsmba%2Findex-v1-a1.m3u8&ref=https%3A%2F%2Fsi.videoapne.to%2Fhls%2Fbdohwhlc7bboxuzvta774gqj2yygdguznxjvgirycorwn4wqyhjw6edhsmba%2Findex-v1-a1.m3u8",
 
     "duration_seconds": 60
-  },
+  }
   
   
   
-       
-{
-    "name":"Video 3",
-    "type": "m3u8",
-    "url":"https://gtc-yupp.vgcdn.net/vglive-sk-254807/tracks-v4a1/mono.ts.m3u8",
-    "duration_seconds": 60
-}
+
 ]
   

@@ -1,763 +1,519 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Apna Tv — Ghar Jaisa</title>
-<style>
-  :root{
-    --bg: #07080a;
-    --panel: #0f1114;
-    --accent: #ff7a30;
-    --accent-soft: #ffb87a;
-    --text: #f4efe8;
-    --muted: #8b8f96;
-    --live-red: #ff3b3b;
-  }
-  *{ box-sizing: border-box; }
-  html, body{
-    margin:0; padding:0; height:100%; width:100%;
-    background: var(--bg);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    overflow: hidden;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Live Sync Broadcast Player</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-  .player-container{
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    background: #000;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-  }
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      background-color: #000;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
 
-  /* iframe stage — two layers cross-fade */
-  .stage{
-    position:absolute;
-    inset:0;
-  }
-  .stage iframe, .stage video{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    border:0;
-    opacity:0;
-    transition: opacity 700ms ease-in-out;
-    pointer-events:none; /* block seeking/clicks on embedded controls */
-  }
-  .stage iframe.active, .stage video.active{
-    opacity:1;
-  }
+    #player-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
 
-  /* invisible interaction blocker so viewers can't reach native player chrome */
-  .click-shield{
-    position:absolute;
-    inset:0;
-    z-index: 5;
-    background: transparent;
-    cursor: default;
-  }
+    .media-element {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      object-fit: contain;
+    }
 
-  /* ---------- Logo ---------- */
-  .brand{
-    position:absolute;
-    top: 18px;
-    right: 22px;
-    z-index: 20;
-    text-align: right;
-    user-select:none;
-    pointer-events:none;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    filter: drop-shadow(0 2px 10px rgba(0,0,0,0.55));
-  }
-  .brand .logo-name{
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    background: linear-gradient(90deg, var(--accent-soft), var(--accent) 60%, #ff5b1f);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    line-height:1;
-  }
-  .brand .logo-name::before{
-    content: '';
-  }
-  .brand .logo-sub{
-    margin-top: 3px;
-    font-size: 10.5px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 600;
-  }
-  .brand .dot{
-    display:inline-block;
-    width:7px; height:7px;
-    border-radius:50%;
-    background: var(--live-red);
-    margin-right:6px;
-    box-shadow: 0 0 8px var(--live-red);
-    animation: pulse 1.6s infinite ease-in-out;
-    vertical-align:middle;
-  }
-  @keyframes pulse{
-    0%,100%{ opacity:1; transform: scale(1); }
-    50%{ opacity:0.4; transform: scale(0.75); }
-  }
+    /* Top-Left Status Box (Always visible, sleek pill style) */
+#debug-status {
+  position: absolute;
+  top: max(5px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  color: rgba(255, 255, 255, 0.9);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
 
-  /* ---------- Fullscreen button ---------- */
-  .fullscreen-btn{
-    position:absolute;
-    top: 18px;
-    left: 18px;
-    z-index: 25;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(255,255,255,0.1);
-    backdrop-filter: blur(6px);
-    color: var(--text);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    opacity: 0.55;
-    transition: opacity 200ms ease, background 200ms ease;
-  }
-  .fullscreen-btn:hover{
-    opacity: 1;
-    background: rgba(0,0,0,0.6);
-  }
+  z-index: 10000;
+  pointer-events: none;
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  /* ---------- EPG scrolling strip ---------- */
-  .epg-strip{
-    position:absolute;
-    left:0; right:0; bottom:0;
-    z-index: 22;
-    height: 26px;
-    overflow: hidden;
-    background: linear-gradient(0deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.0) 100%);
-    pointer-events:none;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 6%, black 94%, transparent 100%);
-    mask-image: linear-gradient(90deg, transparent 0%, black 6%, black 94%, transparent 100%);
-  }
-  .epg-track{
-    position:absolute;
-    top:0; bottom:0;
-    display:flex;
-    align-items:center;
-    white-space:nowrap;
-    will-change: transform;
-    animation: epg-scroll linear infinite;
-  }
-  .epg-item{
-    display:inline-flex;
-    align-items:center;
-    font-size: 11px;
-    letter-spacing: 0.3px;
-    color: rgba(244,239,232,0.65);
-    padding: 0 22px;
-    font-weight:500;
-  }
-  .epg-item .epg-now{
-    color: var(--accent-soft);
-    font-weight:700;
-    margin-right: 6px;
-  }
-  .epg-item .epg-sep{
-    margin-left: 22px;
-    color: rgba(255,122,48,0.4);
-  }
-  @keyframes epg-scroll{
-    from{ transform: translateX(0); }
-    to{ transform: translateX(-50%); }
-  }
+    /* Broadcast TV Bug Logo (Top-Right Transparent Overlay) */
+    #tv-logo-overlay {
+      position: absolute;
+      top: max(14px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      z-index: 10000;
+      pointer-events: none;
+      opacity: 0.55;
+      background: rgba(20, 20, 20, 0.4);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 4px 9px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transform-origin: top right;
+    }
 
-  /* progress sliver for current segment (non-interactive, cosmetic) */
-  .segment-progress{
-    position:absolute;
-    left:0; bottom:0;
-    height:3px;
-    width:0%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
-    z-index:20;
-    pointer-events:none;
-    transition: width 0.25s linear;
-  }
+    .logo-icon {
+      width: clamp(16px, 2vw, 20px);
+      height: clamp(16px, 2vw, 20px);
+      background: linear-gradient(135deg, rgba(255, 59, 48, 0.85), rgba(255, 149, 0, 0.85));
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
 
-  /* ---------- Lock overlay ----------
-     Fully transparent, invisible interaction blocker.
-     No text/icon — just sits on top and swallows all
-     pointer events once the lock time has elapsed. */
-  .lock-overlay{
-    position:absolute;
-    inset:0;
-    z-index: 50;
-    display:none;
-    background: transparent;
-    pointer-events:none;
-  }
-  .lock-overlay.active{
-    display:block;
-    pointer-events:auto;
-  }
+    .logo-icon svg {
+      width: 65%;
+      height: 65%;
+      fill: #ffffff;
+    }
 
-  /* ---------- Buffering / reconnect indicator ---------- */
-  .reconnect{
-    position:absolute;
-    z-index: 40;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background: rgba(0,0,0,0.55);
-    color: var(--text);
-    font-size: 13px;
-    letter-spacing:0.5px;
-    pointer-events:none;
-  }
-  .reconnect.show{ display:flex; }
-  .spinner{
-    width:16px; height:16px;
-    border-radius:50%;
-    border: 2px solid rgba(255,255,255,0.25);
-    border-top-color: var(--accent);
-    margin-right:10px;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin{ to{ transform: rotate(360deg); } }
+    .logo-text-container {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
 
-  /* unmute hint if autoplay-with-sound is blocked by browser */
-  .tap-hint{
-    position:absolute;
-    inset:0;
-    z-index: 45;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background: rgba(0,0,0,0.35);
-    cursor:pointer;
-  }
-  .tap-hint.show{ display:flex; }
-  .tap-hint .pill{
-    background: rgba(20,20,22,0.85);
-    border:1px solid rgba(255,255,255,0.12);
-    padding: 12px 20px;
-    border-radius: 30px;
-    color: var(--text);
-    font-size: 13px;
-    font-weight:600;
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
+    .logo-title {
+      font-size: clamp(9px, 1.1vw, 12px);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: rgba(255, 255, 255, 0.9);
+      text-transform: uppercase;
+    }
 
-  /* ---------- Browser restriction gate ---------- */
-  .browser-gate{
-    position:fixed;
-    inset:0;
-    z-index: 999;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    background: var(--bg);
-    color: var(--text);
-    text-align:center;
-    padding: 30px;
-  }
-  .browser-gate.show{ display:flex; }
-  .browser-gate .gate-logo{
-    font-size: 22px;
-    font-weight:800;
-    background: linear-gradient(90deg, var(--accent-soft), var(--accent) 60%, #ff5b1f);
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-    margin-bottom: 4px;
-  }
-  .browser-gate .gate-sub{
-    font-size: 10.5px;
-    letter-spacing:3px;
-    text-transform:uppercase;
-    color: var(--muted);
-    font-weight:600;
-    margin-bottom: 28px;
-  }
-  .browser-gate h1{
-    font-size: 18px;
-    margin: 0 0 10px;
-    font-weight:700;
-  }
-  .browser-gate p{
-    font-size: 13.5px;
-    color: var(--muted);
-    max-width: 360px;
-    line-height:1.6;
-    margin: 0 0 22px;
-  }
-  .browser-gate a.chrome-link{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    background: var(--accent);
-    color:#100a05;
-    font-weight:700;
-    font-size:13px;
-    text-decoration:none;
-    padding: 11px 22px;
-    border-radius: 30px;
-  }
-</style>
+    .logo-subtitle {
+      font-size: clamp(6px, 0.7vw, 8px);
+      font-weight: 500;
+      letter-spacing: 0.6px;
+      color: rgba(255, 215, 0, 0.85);
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    /* Loading Overlay & Spinner */
+    #loader-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      z-index: 9998;
+      pointer-events: none;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .spinner {
+      width: 54px;
+      height: 54px;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+      border-top-color: #ff3b30;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    .loading-text {
+      color: #ffd700;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Bottom Control Overlay */
+    #controls-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 0 16px calc(16px + env(safe-area-inset-bottom)) 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+
+    .ui-hidden {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    .controls-left, .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Sleek Round Icon Buttons */
+    .control-btn {
+      background: rgba(25, 25, 25, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.85);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .control-btn svg {
+      width: 17px;
+      height: 17px;
+      fill: rgba(255, 255, 255, 0.9);
+    }
+
+    .control-btn:active {
+      transform: scale(0.9);
+      background: rgba(50, 50, 50, 0.75);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
-<div class="browser-gate" id="browserGate">
-  <div class="gate-logo">Apna Tv</div>
-  <div class="gate-sub">Ghar Jaisa</div>
-  <h1>Please open this channel in Google Chrome</h1>
-  <p>Apna Tv is optimized for a smooth, uninterrupted live broadcast and currently only supports Google Chrome. Please switch browsers to continue watching.</p>
-  <a class="chrome-link" href="https://www.google.com/chrome/" target="_blank" rel="noopener">Get Google Chrome →</a>
-</div>
+  <div id="player-container">
+    <!-- Top-Left Status Display (always visible) -->
+    <div id="debug-status">Now Playing : Initializing...</div>
 
-<div class="player-container" id="playerContainer">
+    <!-- Top-Right Transparent TV Watermark Overlay -->
+    <div id="tv-logo-overlay">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+      </div>
+      <div class="logo-text-container">
+        <span class="logo-title">APNA TV</span>
+        <span class="logo-subtitle">Ghar Jaisa</span>
+      </div>
+    </div>
 
-  <div class="stage" id="stage">
-    <!-- iframes injected here -->
+    <!-- Centered Loader Spinner -->
+    <div id="loader-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Please Wait</div>
+    </div>
+
+    <!-- Media Elements -->
+    <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline></video>
+    <iframe id="iframe-player" class="media-element" style="display: none;"></iframe>
+
+    <!-- Bottom Controls -->
+    <div id="controls-overlay">
+      <div class="controls-left">
+        <button id="btn-play" class="control-btn" aria-label="Play/Pause">
+          <svg id="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          <svg id="icon-play" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+
+        <button id="btn-mute" class="control-btn" aria-label="Mute/Unmute">
+          <svg id="icon-muted" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+          <svg id="icon-unmuted" viewBox="0 0 24 24" style="display:none;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+      </div>
+
+      <div class="controls-right">
+        <button id="btn-fullscreen" class="control-btn" aria-label="Fullscreen">
+          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </button>
+      </div>
+    </div>
   </div>
 
-  <div class="click-shield" id="clickShield"></div>
+  <script>
+    const PLAYLIST_URL = './playlist.json';
+    const FETCH_INTERVAL_MS = 2000;
+    const SYNC_CHECK_INTERVAL_MS = 500;
+    const MAX_ALLOWED_DRIFT_SEC = 0.5;
+    const UI_HIDE_TIMEOUT_MS = 3000;
 
-  <div class="segment-progress" id="segmentProgress"></div>
+    const container = document.getElementById('player-container');
+    const videoElem = document.getElementById('native-player');
+    const iframeElem = document.getElementById('iframe-player');
+    const debugElem = document.getElementById('debug-status');
+    const loaderElem = document.getElementById('loader-overlay');
+    const controlsOverlay = document.getElementById('controls-overlay');
 
-  <div class="brand">
-    <div class="logo-name">Apna Tv</div>
-    <div class="logo-sub">Ghar Jaisa</div>
-  </div>
+    const btnPlay = document.getElementById('btn-play');
+    const iconPlay = document.getElementById('icon-play');
+    const iconPause = document.getElementById('icon-pause');
 
-  <button class="fullscreen-btn" id="fullscreenBtn" aria-label="Toggle fullscreen" title="Fullscreen">
-    <svg id="fsIconExpand" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 3v-3h2v5h-5v-2h3z"/></svg>
-    <svg id="fsIconCollapse" viewBox="0 0 24 24" width="18" height="18" style="display:none"><path fill="currentColor" d="M9 4v3H6v2H4V4h5zm6 0h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 0h2v5h-5v-2h3v-3z"/></svg>
-  </button>
+    const btnMute = document.getElementById('btn-mute');
+    const iconMuted = document.getElementById('icon-muted');
+    const iconUnmuted = document.getElementById('icon-unmuted');
 
-  <div class="epg-strip" id="epgStrip">
-    <div class="epg-track" id="epgTrack"></div>
-  </div>
+    const btnFullscreen = document.getElementById('btn-fullscreen');
 
-  <div class="reconnect" id="reconnect"><span class="spinner"></span>Reconnecting…</div>
+    let playlist = [];
+    let hlsInstance = null;
+    let currentItem = null;
+    let totalPlaylistDuration = 0;
+    let uiHideTimer = null;
 
-  <div class="tap-hint" id="tapHint">
-    <div class="pill">🔊 Tap anywhere to enable sound</div>
-  </div>
+    videoElem.muted = true;
 
-  <div class="lock-overlay" id="lockOverlay"></div>
-
-</div>
-
-<script>
-(function(){
-
-  // =========================================================
-  // CONFIG
-  // =========================================================
-  const PLAYLIST_URL = "playlist.json";      // JSON source, poll for live edits
-  const POLL_INTERVAL_MS = 4000;              // how often we check for playlist changes
-  const LOCK_AFTER_MS = 60 * 1000;            // 1 minute -> lock screen from interaction
-  const SWITCH_FADE_MS = 700;                 // crossfade duration between segments
-  const PRELOAD_LEAD_MS = 2500;               // preload next iframe this many ms before switch
-  const CHROME_ONLY = true;                   // set false to allow all browsers (recommended — see notes)
-
-  // =========================================================
-  // BROWSER GATE
-  // Detects desktop/mobile Chrome via UA sniffing. NOTE: this is
-  // a presentation/UX choice, not a real anti-skip mechanism —
-  // UA strings are trivially spoofable by anyone determined to
-  // bypass it, and it will also block legitimate Edge/Brave/Opera
-  // users (all Chromium-based, but report a different UA) and all
-  // Safari/Firefox users. It does not add any actual protection
-  // against seeking/skipping — that protection comes entirely from
-  // the click-shield + lock-overlay below, which work identically
-  // in every browser.
-  // =========================================================
-  function isChrome(){
-    const ua = navigator.userAgent;
-    const vendor = navigator.vendor || "";
-    const isChromium = /Chrome\/|CriOS\//.test(ua);
-    const isRealChrome = isChromium && /Google Inc/.test(vendor) && !/Edg\/|OPR\/|Brave|SamsungBrowser/.test(ua);
-    return isRealChrome;
-  }
-
-  if (CHROME_ONLY && !isChrome()){
-    document.getElementById('browserGate').classList.add('show');
-    // Stop here — do not initialize player for non-Chrome browsers
-    throw new Error('Apna Tv: Chrome-only mode active, halting init for non-Chrome browser.');
-  }
-
-  // =========================================================
-  // STATE
-  // =========================================================
-  let playlist = [];
-  let currentIndex = -1;
-  let segmentStartAt = 0;
-  let segmentTimer = null;
-  let progressRAF = null;
-  let lastPlaylistHash = "";
-  let preloadedNextIndex = -1;
-  let locked = false;
-  let userInteracted = false;
-
-  const stage = document.getElementById('stage');
-  const segmentProgress = document.getElementById('segmentProgress');
-  const epgTrack = document.getElementById('epgTrack');
-  const fullscreenBtn = document.getElementById('fullscreenBtn');
-  const fsIconExpand = document.getElementById('fsIconExpand');
-  const fsIconCollapse = document.getElementById('fsIconCollapse');
-  const lockOverlay = document.getElementById('lockOverlay');
-  const reconnectEl = document.getElementById('reconnect');
-  const tapHint = document.getElementById('tapHint');
-  const clickShield = document.getElementById('clickShield');
-  const playerContainer = document.getElementById('playerContainer');
-
-  // =========================================================
-  // FULLSCREEN TOGGLE
-  // =========================================================
-  fullscreenBtn.addEventListener('click', () => {
-    if (!document.fullscreenElement){
-      playerContainer.requestFullscreen?.() || playerContainer.webkitRequestFullscreen?.();
-    } else {
-      document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+    function hideLoader() {
+      loaderElem.classList.add('ui-hidden');
     }
-  });
-  document.addEventListener('fullscreenchange', () => {
-    const isFs = !!document.fullscreenElement;
-    fsIconExpand.style.display = isFs ? 'none' : 'block';
-    fsIconCollapse.style.display = isFs ? 'block' : 'none';
-  });
-
-  // =========================================================
-  // EPG STRIP — lightweight scrolling schedule built from playlist
-  // =========================================================
-  function renderEPG(){
-    if (!playlist.length){ epgTrack.innerHTML = ''; return; }
-    const build = () => playlist.map((item, i) => {
-      const tag = i === currentIndex ? '<span class="epg-now">NOW</span>' : '';
-      const label = item.title || (item.type === 'mp4' ? 'Video Segment' : 'Live Segment');
-      return `<span class="epg-item">${tag}${label}<span class="epg-sep">•</span></span>`;
-    }).join('');
-    epgTrack.innerHTML = build() + build();
-    const trackWidth = epgTrack.scrollWidth / 2;
-    const pxPerSec = 40;
-    const duration = Math.max(10, trackWidth / pxPerSec);
-    epgTrack.style.animationDuration = duration + 's';
-  }
-
-  // =========================================================
-  // AUTOPLAY BYPASS LOGIC
-  // Browsers block autoplay-with-sound. Strategy:
-  // 1. Always launch iframes muted+autoplay (universally allowed).
-  // 2. Detect first genuine user gesture (click/touch/key) anywhere
-  //    on the document and use it to "unlock" audio context style
-  //    permission, then re-inject current iframe with sound enabled.
-  // 3. Show a subtle tap-to-enable-sound hint until that happens.
-  // =========================================================
-  function attachAutoplayBypass(){
-    const unlock = () => {
-      if (userInteracted) return;
-      userInteracted = true;
-      tapHint.classList.remove('show');
-      // Re-render current segment with sound now that a gesture occurred
-      if (currentIndex > -1) renderSegment(currentIndex, true);
-      window.removeEventListener('click', unlock);
-      window.removeEventListener('touchstart', unlock);
-      window.removeEventListener('keydown', unlock);
-    };
-    window.addEventListener('click', unlock, { passive:true });
-    window.addEventListener('touchstart', unlock, { passive:true });
-    window.addEventListener('keydown', unlock, { passive:true });
-
-    // Show hint after a short delay if still muted
-    setTimeout(() => {
-      if (!userInteracted) tapHint.classList.add('show');
-    }, 1200);
-  }
-
-  // =========================================================
-  // SCREEN LOCK — after 1 minute, block interaction so the
-  // viewer can't fiddle with / skip the embedded video chrome.
-  // The click-shield is already always-on to prevent seeking;
-  // this overlay additionally communicates the locked state.
-  // =========================================================
-  function armScreenLock(){
-    setTimeout(() => {
-      locked = true;
-      // Permanently active, fully transparent — no message, no fade out.
-      // From this point on it silently absorbs all clicks/taps.
-      lockOverlay.classList.add('active');
-    }, LOCK_AFTER_MS);
-  }
-
-  // click-shield always intercepts clicks so viewers cannot reach
-  // native iframe scrub bars / skip / pause controls at any point,
-  // even before the lock time — it's just not click-through until
-  // armScreenLock() flips it to fully block (see .active class).
-  clickShield.addEventListener('click', (e) => e.preventDefault());
-  clickShield.addEventListener('contextmenu', (e) => e.preventDefault());
-
-  // =========================================================
-  // BUILD IFRAME URL — force autoplay/mute/no-controls params
-  // where the embed provider supports them, without breaking
-  // arbitrary embed URLs that already have query strings.
-  // =========================================================
-  function buildIframeSrc(baseUrl, withSound){
-    try{
-      const u = new URL(baseUrl, window.location.href);
-      u.searchParams.set('autoplay', '1');
-      u.searchParams.set('mute', withSound ? '0' : '1');
-      u.searchParams.set('controls', '0');
-      u.searchParams.set('rel', '0');
-      u.searchParams.set('modestbranding', '1');
-      u.searchParams.set('playsinline', '1');
-      return u.toString();
-    }catch(e){
-      return baseUrl;
+    function showLoader() {
+      loaderElem.classList.remove('ui-hidden');
     }
-  }
 
-  // duration can arrive as `duration` or `duration_seconds`
-  function getDuration(item){
-    return item.duration || item.duration_seconds || 30;
-  }
-
-  function makeMediaEl(item, withSound){
-    // type "mp4" (or any direct video file) -> native <video>, not iframe
-    if (item.type === 'mp4' || item.type === 'video'){
-      const v = document.createElement('video');
-      v.src = item.url;
-      v.autoplay = true;
-      v.muted = !withSound;
-      v.playsInline = true;
-      v.controls = false;
-      v.disablePictureInPicture = true;
-      v.style.position = 'absolute';
-      v.style.inset = '0';
-      v.style.width = '100%';
-      v.style.height = '100%';
-      v.style.objectFit = 'contain';
-      v.style.background = '#000';
-      v.dataset.itemId = item.id || item.url;
-      v.play().catch(()=>{ /* wait for gesture, tap-hint already covers this */ });
-      v.addEventListener('error', () => {
-        console.warn('Apna Tv: video failed to load, skipping to next segment.', item.url);
-        advanceToNext();
-      });
-      return v;
-    }
-    // default: iframe embed
-    const f = document.createElement('iframe');
-    f.src = buildIframeSrc(item.url, withSound);
-    f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
-    f.setAttribute('allowfullscreen', 'true');
-    f.setAttribute('frameborder', '0');
-    f.setAttribute('scrolling', 'no');
-    f.dataset.itemId = item.id || item.url;
-    return f;
-  }
-
-  // =========================================================
-  // RENDER / CROSSFADE SEGMENT
-  // =========================================================
-  function renderSegment(index, forceResound){
-    const item = playlist[index];
-    if (!item) return;
-
-    reconnectEl.classList.remove('show');
-
-    const withSound = userInteracted;
-    const incoming = makeMediaEl(item, withSound);
-    stage.appendChild(incoming);
-
-    // force layout then fade in
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        incoming.classList.add('active');
-      });
+    videoElem.addEventListener('playing', hideLoader);
+    videoElem.addEventListener('waiting', showLoader);
+    videoElem.addEventListener('seeking', showLoader);
+    videoElem.addEventListener('seeked', () => {
+      if (!videoElem.paused) hideLoader();
     });
 
-    // remove old iframes after fade completes (keep only the new one)
-    const olds = Array.from(stage.querySelectorAll('iframe, video')).filter(f => f !== incoming);
-    setTimeout(() => {
-      olds.forEach(f => f.remove());
-    }, SWITCH_FADE_MS + 50);
+    iframeElem.addEventListener('load', hideLoader);
 
-    currentIndex = index;
-    segmentStartAt = Date.now();
-    preloadedNextIndex = -1;
-
-    scheduleAdvance(getDuration(item));
-    animateProgress(getDuration(item));
-    renderEPG();
-  }
-
-  function scheduleAdvance(durationSec){
-    if (segmentTimer) clearTimeout(segmentTimer);
-    const ms = Math.max(1000, durationSec * 1000);
-    segmentTimer = setTimeout(advanceToNext, ms);
-
-    // Optional: preload next iframe slightly ahead for a seamless
-    // switch (kept in DOM off-screen opacity 0 so it's warmed up).
-    const preloadDelay = Math.max(500, ms - PRELOAD_LEAD_MS);
-    setTimeout(() => {
-      preloadNext();
-    }, preloadDelay);
-  }
-
-  function preloadNext(){
-    if (playlist.length < 2) return;
-    const nextIndex = (currentIndex + 1) % playlist.length;
-    if (nextIndex === preloadedNextIndex) return;
-    preloadedNextIndex = nextIndex;
-    const item = playlist[nextIndex];
-    const pre = makeMediaEl(item, userInteracted);
-    pre.dataset.preload = "true";
-    pre.style.opacity = "0";
-    stage.appendChild(pre);
-  }
-
-  function advanceToNext(){
-    if (!playlist.length) return;
-    const nextIndex = (currentIndex + 1) % playlist.length;
-
-    // If we already preloaded this exact segment, just activate it
-    const preloaded = stage.querySelector(`[data-preload="true"]`);
-    const nextItemKey = playlist[nextIndex].id || playlist[nextIndex].url;
-    if (preloaded && nextItemKey === preloaded.dataset.itemId){
-      preloaded.removeAttribute('data-preload');
-      const olds = Array.from(stage.querySelectorAll('iframe, video')).filter(f => f !== preloaded);
-      requestAnimationFrame(() => preloaded.classList.add('active'));
-      setTimeout(() => olds.forEach(f => f.remove()), SWITCH_FADE_MS + 50);
-
-      currentIndex = nextIndex;
-      segmentStartAt = Date.now();
-      preloadedNextIndex = -1;
-      scheduleAdvance(getDuration(playlist[nextIndex]));
-      animateProgress(getDuration(playlist[nextIndex]));
-      renderEPG();
-      return;
-    }
-
-    renderSegment(nextIndex);
-  }
-
-  function animateProgress(durationSec){
-    if (progressRAF) cancelAnimationFrame(progressRAF);
-    const total = durationSec * 1000;
-    const start = Date.now();
-    function tick(){
-      const elapsed = Date.now() - start;
-      const pct = Math.min(100, (elapsed / total) * 100);
-      segmentProgress.style.width = pct + '%';
-      if (pct < 100){
-        progressRAF = requestAnimationFrame(tick);
+    // --- 1. Aggressive JSON Fetching ---
+    async function fetchPlaylist() {
+      try {
+        const response = await fetch(`${PLAYLIST_URL}?cachebuster=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) {
+          debugElem.textContent = `Now Playing : Error (HTTP ${response.status})`;
+          return;
+        }
+        const data = await response.json();
+        
+        if (Array.isArray(data) && data.length > 0) {
+          if (JSON.stringify(data) !== JSON.stringify(playlist)) {
+            playlist = data;
+            totalPlaylistDuration = playlist.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
+            syncEngine();
+          }
+        }
+      } catch (e) {
+        debugElem.textContent = `Now Playing : Fetch Error`;
       }
     }
-    tick();
-  }
+    setInterval(fetchPlaylist, FETCH_INTERVAL_MS);
+    fetchPlaylist();
 
-  // =========================================================
-  // LIVE SYNC — poll JSON, detect changes, reflect instantly
-  // without any page refresh. Handles:
-  //  - playlist content changes (URLs/durations/order)
-  //  - keeps current playback position stable if unaffected
-  //  - re-syncs smoothly if the active segment was removed/changed
-  // =========================================================
-  async function fetchPlaylist(){
-    try{
-      const res = await fetch(PLAYLIST_URL + '?_=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) throw new Error('bad status ' + res.status);
-      const data = await res.json();
-      // Support both a bare array [...] and a wrapped { items: [...] } format
-      const itemsArray = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
-      const hash = JSON.stringify(itemsArray) + (data.updated || '');
+    // --- 2. Live Broadcast Time Logic ---
+    function getGlobalTimeState() {
+      if (!totalPlaylistDuration || totalPlaylistDuration === 0) return null;
+      
+      const epochSeconds = Date.now() / 1000;
+      const currentLoopTime = epochSeconds % totalPlaylistDuration;
 
-      if (hash === lastPlaylistHash){
-        reconnectEl.classList.remove('show');
-        return; // no changes, nothing to do
+      let accumulatedTime = 0;
+      for (let i = 0; i < playlist.length; i++) {
+        const item = playlist[i];
+        if (currentLoopTime >= accumulatedTime && currentLoopTime < accumulatedTime + item.duration_seconds) {
+          return {
+            itemIndex: i,
+            item: item,
+            seekPosition: currentLoopTime - accumulatedTime
+          };
+        }
+        accumulatedTime += item.duration_seconds;
       }
+      return null;
+    }
 
-      const isFirstLoad = lastPlaylistHash === "";
-      lastPlaylistHash = hash;
+    // --- 3. Strict Live Drift Lock & Top Box Updater ---
+    function syncEngine() {
+      const state = getGlobalTimeState();
+      if (!state) return;
 
-      const previousItem = playlist[currentIndex];
-      playlist = itemsArray;
+      const { item, seekPosition } = state;
+      const displayName = item.name ? item.name : `Video ${state.itemIndex + 1}`;
 
-      if (!playlist.length) return;
+      debugElem.textContent = `Now Playing : ${displayName}`;
 
-      if (isFirstLoad){
-        renderSegment(0);
-        attachAutoplayBypass();
-        armScreenLock();
+      if (!currentItem || currentItem.url !== item.url) {
+        currentItem = item;
+        showLoader();
+        loadMediaSource(item, seekPosition);
         return;
       }
 
-      // Try to keep playing the same item if it still exists in new list
-      const prevKey = previousItem ? (previousItem.id || previousItem.url) : null;
-      const stillExistsIndex = prevKey
-        ? playlist.findIndex(p => (p.id || p.url) === prevKey)
-        : -1;
+      if (item.type === 'mp4' || item.type === 'm3u8') {
+        const drift = Math.abs(videoElem.currentTime - seekPosition);
+        if (drift > MAX_ALLOWED_DRIFT_SEC) {
+          videoElem.currentTime = seekPosition;
+        }
 
-      if (stillExistsIndex > -1){
-        // same content still airing — just update index reference,
-        // don't interrupt playback
-        currentIndex = stillExistsIndex;
-      } else {
-        // current segment was removed/changed upstream — switch smoothly now
-        const fallbackIndex = Math.min(currentIndex > -1 ? currentIndex : 0, playlist.length - 1);
-        renderSegment(fallbackIndex);
+        if (videoElem.paused && iconPlay.style.display === 'none') {
+          videoElem.play().catch(() => {});
+        }
       }
-
-      reconnectEl.classList.remove('show');
-    }catch(err){
-      // network hiccup — show subtle reconnect state, keep last frame playing
-      reconnectEl.classList.add('show');
-      console.warn('Apna Tv: playlist fetch failed, retrying…', err);
     }
+    setInterval(syncEngine, SYNC_CHECK_INTERVAL_MS);
+
+    // --- 4. Switch Media Types (MP4, HLS, iFrame) ---
+    
+    function loadMediaSource(item, initialSeek) {
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
   }
 
-  function startPolling(){
-    fetchPlaylist();
-    setInterval(fetchPlaylist, POLL_INTERVAL_MS);
-  }
+  if (item.type === 'iframe') {
+    videoElem.style.display = 'none';
+    videoElem.pause();
+    iframeElem.style.display = 'block';
+    iframeElem.src = item.url;
+  } else {
+    iframeElem.style.display = 'none';
+    iframeElem.src = '';
+    videoElem.style.display = 'block';
 
-  // =========================================================
-  // VISIBILITY / RESUME HANDLING
-  // If tab was backgrounded, re-check playlist immediately on
-  // return so the viewer instantly re-syncs to "live" position.
-  // =========================================================
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible'){
-      fetchPlaylist();
+    if (item.type === 'm3u8') {
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
+
+        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            debugElem.textContent = `Now Playing : Stream Error (${data.type})`;
+            hideLoader();
+          }
+        });
+
+        hlsInstance.loadSource(item.url);
+        hlsInstance.attachMedia(videoElem);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoElem.currentTime = initialSeek;
+          videoElem.play().catch(() => {});
+        });
+      } else if (videoElem.canPlayType('application/vnd.apple.mpegurl')) {
+        videoElem.src = item.url;
+        videoElem.currentTime = initialSeek;
+        videoElem.play().catch(() => {});
+      }
+    } else if (item.type === 'mp4') {
+      videoElem.src = item.url;
+      videoElem.currentTime = initialSeek;
+      videoElem.play().catch(() => {});
     }
-  });
+  }
+    }
 
-  // =========================================================
-  // Prevent common skip/dev shortcuts at the page level
-  // (best-effort UX deterrent, not a security boundary)
-  // =========================================================
-  document.addEventListener('keydown', (e) => {
-    const blocked = ['ArrowRight','ArrowLeft','MediaTrackNext','MediaTrackPrevious'];
-    if (blocked.includes(e.key)) e.preventDefault();
-  });
+    // --- 5. Auto Fade Control Overlay (status box stays visible always) ---
+    function showControls() {
+      controlsOverlay.classList.remove('ui-hidden');
+      
+      clearTimeout(uiHideTimer);
+      uiHideTimer = setTimeout(() => {
+        controlsOverlay.classList.add('ui-hidden');
+      }, UI_HIDE_TIMEOUT_MS);
+    }
 
-  // Kick things off
-  startPolling();
+    container.addEventListener('mousemove', showControls);
+    container.addEventListener('click', showControls);
+    container.addEventListener('touchstart', showControls, { passive: true });
+    container.addEventListener('pointerdown', showControls, { passive: true });
+    container.addEventListener('pointermove', showControls, { passive: true });
+    document.addEventListener('mousemove', showControls);
+    document.addEventListener('pointerdown', showControls, { passive: true });
+    showControls();
 
-})();
-</script>
+    // Button Click Handlers
+    btnPlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (videoElem.paused) {
+        videoElem.play();
+        iconPlay.style.display = 'none';
+        iconPause.style.display = 'block';
+      } else {
+        videoElem.pause();
+        iconPlay.style.display = 'block';
+        iconPause.style.display = 'none';
+      }
+    });
 
+    btnMute.addEventListener('click', (e) => {
+      e.stopPropagation();
+      videoElem.muted = !videoElem.muted;
+      if (videoElem.muted) {
+        iconMuted.style.display = 'block';
+        iconUnmuted.style.display = 'none';
+      } else {
+        iconMuted.style.display = 'none';
+        iconUnmuted.style.display = 'block';
+      }
+    });
+
+    btnFullscreen.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        } else if (videoElem.webkitEnterFullscreen) {
+          videoElem.webkitEnterFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    });
+
+    // Anti-Bypass Seeking Revert Logic
+    videoElem.addEventListener('seeking', () => {
+      const state = getGlobalTimeState();
+      if (state && (state.item.type === 'mp4' || state.item.type === 'm3u8')) {
+        const drift = Math.abs(videoElem.currentTime - state.seekPosition);
+        if (drift > MAX_ALLOWED_DRIFT_SEC) {
+          videoElem.currentTime = state.seekPosition;
+        }
+      }
+    });
+  </script>
 </body>
 </html>

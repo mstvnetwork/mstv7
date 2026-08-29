@@ -267,7 +267,6 @@
       </div>
     </div>
   </div>
-
   <script>
     const PLAYLIST_URL = './playlist.json';
     const FETCH_INTERVAL_MS = 2000;
@@ -316,7 +315,7 @@
 
     iframeElem.addEventListener('load', hideLoader);
 
-    // --- 1. Aggressive JSON Fetching ---
+    // --- 1. Aggressive JSON Fetching (Safely Updated) ---
     async function fetchPlaylist() {
       try {
         const response = await fetch(`${PLAYLIST_URL}?cachebuster=${Date.now()}`, { cache: 'no-store' });
@@ -328,9 +327,18 @@
         
         if (Array.isArray(data) && data.length > 0) {
           if (JSON.stringify(data) !== JSON.stringify(playlist)) {
-            playlist = data;
-            totalPlaylistDuration = playlist.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
-            syncEngine();
+            // If nothing is playing yet, initialize immediately
+            if (!currentItem) {
+              playlist = data;
+              totalPlaylistDuration = playlist.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
+              syncEngine();
+            } else {
+              // Queue update safely: update the array and duration for future slots, 
+              // but do NOT trigger an immediate reset/jump on the currently running video.
+              playlist = data;
+              totalPlaylistDuration = playlist.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
+              console.log("Playlist updated in background. Current video will finish its course first.");
+            }
           }
         }
       } catch (e) {
@@ -372,13 +380,23 @@
 
       debugElem.textContent = `Now Playing : ${displayName}`;
 
-      if (!currentItem || currentItem.url !== item.url) {
+      // If we don't have an active stream running, start it
+      if (!currentItem) {
         currentItem = item;
         showLoader();
         loadMediaSource(item, seekPosition);
         return;
       }
 
+      // If a new URL/item has naturally rolled in by timeline clock sequence:
+      if (currentItem.url !== item.url) {
+        currentItem = item;
+        showLoader();
+        loadMediaSource(item, seekPosition);
+        return;
+      }
+
+      // Maintain live-sync drift for active streams
       if (item.type === 'mp4' || item.type === 'm3u8') {
         const drift = Math.abs(videoElem.currentTime - seekPosition);
         if (drift > MAX_ALLOWED_DRIFT_SEC) {
@@ -393,51 +411,50 @@
     setInterval(syncEngine, SYNC_CHECK_INTERVAL_MS);
 
     // --- 4. Switch Media Types (MP4, HLS, iFrame) ---
-    
     function loadMediaSource(item, initialSeek) {
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
 
-  if (item.type === 'iframe') {
-    videoElem.style.display = 'none';
-    videoElem.pause();
-    iframeElem.style.display = 'block';
-    iframeElem.src = item.url;
-  } else {
-    iframeElem.style.display = 'none';
-    iframeElem.src = '';
-    videoElem.style.display = 'block';
+      if (item.type === 'iframe') {
+        videoElem.style.display = 'none';
+        videoElem.pause();
+        iframeElem.style.display = 'block';
+        iframeElem.src = item.url;
+      } else {
+        iframeElem.style.display = 'none';
+        iframeElem.src = '';
+        videoElem.style.display = 'block';
 
-    if (item.type === 'm3u8') {
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
+        if (item.type === 'm3u8') {
+          if (Hls.isSupported()) {
+            hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
 
-        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            debugElem.textContent = `Now Playing : Stream Error (${data.type})`;
-            hideLoader();
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+              if (data.fatal) {
+                debugElem.textContent = `Now Playing : Stream Error (${data.type})`;
+                hideLoader();
+              }
+            });
+
+            hlsInstance.loadSource(item.url);
+            hlsInstance.attachMedia(videoElem);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+              videoElem.currentTime = initialSeek;
+              videoElem.play().catch(() => {});
+            });
+          } else if (videoElem.canPlayType('application/vnd.apple.mpegurl')) {
+            videoElem.src = item.url;
+            videoElem.currentTime = initialSeek;
+            videoElem.play().catch(() => {});
           }
-        });
-
-        hlsInstance.loadSource(item.url);
-        hlsInstance.attachMedia(videoElem);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        } else if (item.type === 'mp4') {
+          videoElem.src = item.url;
           videoElem.currentTime = initialSeek;
           videoElem.play().catch(() => {});
-        });
-      } else if (videoElem.canPlayType('application/vnd.apple.mpegurl')) {
-        videoElem.src = item.url;
-        videoElem.currentTime = initialSeek;
-        videoElem.play().catch(() => {});
+        }
       }
-    } else if (item.type === 'mp4') {
-      videoElem.src = item.url;
-      videoElem.currentTime = initialSeek;
-      videoElem.play().catch(() => {});
-    }
-  }
     }
 
     // --- 5. Auto Fade Control Overlay (status box stays visible always) ---
@@ -514,6 +531,8 @@
         }
       }
     });
-  </script>
+      </script>
 </body>
 </html>
+
+              

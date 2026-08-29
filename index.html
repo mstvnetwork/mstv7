@@ -2,537 +2,1254 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Live Sync Broadcast Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="x-dns-prefetch-control" content="on">
+
+  <!-- Search Engine Optimization (SEO) -->
+  <title>MSTV Network | Free Live Indian, Pakistani &amp; Nepali Channels</title>
+  <meta name="description" content="Watch MSTV Network for free live Indian, Pakistani, Nepali, religious, entertainment, and sports TV channels online.">
+  <meta name="author" content="MSTV Network">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#06070b">
+
+  <!-- Google Site Verification -->
+  <meta name="google-site-verification" content="Y1hEvT4w92Qa9BGvDwkBL7gdCxEVtBNZcHafXCA6u7g">
+
+  <!-- Facebook App ID -->
+  <meta property="fb:app_id" content="966242223397117">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MSTV Network">
+  <meta property="og:url" content="https://crickethd.pages.dev/">
+  <meta property="og:title" content="MSTV Network | Free Live Indian, Pakistani &amp; Nepali Channels">
+  <meta property="og:description" content="Watch MSTV Network for free live Indian, Pakistani, Nepali, religious, entertainment, and sports TV channels online.">
+  <meta property="og:image" content="https://i.imgur.com/3zATbpw.jpeg">
+  <meta property="og:image:secure_url" content="https://i.imgur.com/3zATbpw.jpeg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MSTV Network Channel Preview">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://crickethd.pages.dev/">
+  <meta name="twitter:title" content="MSTV Network | Free Live Indian, Pakistani &amp; Nepali Channels">
+  <meta name="twitter:description" content="Watch MSTV Network for free live Indian, Pakistani, Nepali, religious, entertainment, and sports TV channels online.">
+  <meta name="twitter:image" content="https://i.imgur.com/3zATbpw.jpeg">
+
+  <!-- Structured Data (JSON-LD for Google Rich Results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "MSTV Network",
+    "url": "https://crickethd.pages.dev/",
+    "description": "Watch MSTV Network for free live Indian, Pakistani, English Premium Tv Channels online."
+  }
+  </script>
+
+  <!-- Canonical & Assets -->
+  <link rel="canonical" href="https://crickethd.pages.dev/">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://gc.zgo.at">
+  <link rel="dns-prefetch" href="https://i.imgur.com">
+
+  <!-- Stylesheets -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap"></noscript>
+
+  <!-- Scripts -->
+  <script defer src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+  <script data-goatcounter="https://mstv.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
+  :root{
+    --void:#06070b;--void2:#0a0c14;--panel:#0f1220;--panel2:#151933;
+    --glass:rgba(18,22,40,.62);--glass-border:rgba(255,255,255,.08);
+    --line:rgba(255,255,255,.06);
+    --cyan:#3df2ff;--violet:#8d5cff;--flame:#ff4d6a;
+    --live:#33ff9b;--gold:#ffcf5c;
+    --ink:#f2f4fb;--dim:#8790ac;--dim2:#535d78;
+    --grad-signal:linear-gradient(120deg,var(--cyan),var(--violet));
+    --font-sans:'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono:'Courier New', monospace;
+  }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      height: 100dvh;
-      background-color: #000;
-      overflow: hidden;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-    #player-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      background-color: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 
-    .media-element {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-      object-fit: contain;
-    }
+  #app-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
 
-    /* Top-Left Status Box (Always visible, sleek pill style) */
-#debug-status {
-  position: absolute;
-  top: max(5px, env(safe-area-inset-top));
-  left: max(14px, env(safe-area-inset-left));
-  color: rgba(255, 255, 255, 0.9);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 7px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  padding: 4px 10px;
+  /* ── HEADER ── */
+  #header {
+    height: 48px;
+    min-height: 48px;
+    background: rgba(6,7,11,.9);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .logo-mark { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
+  .logo-icon {
+    width: 28px; height: 28px; border-radius: 6px; background: var(--void2);
+    border: 1px solid var(--glass-border); display: grid; place-items: center;
+  }
+  .logo-text { font-weight: 700; font-size: 16px; letter-spacing: 0.5px; color: var(--ink); }
+  .live-badge {
+    display: flex; align-items: center; gap: 4px; background: rgba(51,255,155,.08);
+    border: 1px solid rgba(51,255,155,.28); border-radius: 12px; padding: 2px 8px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600; color: var(--live);
+  }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--live); animation: blink 1.4s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  z-index: 10000;
-  pointer-events: none;
-  max-width: 60vw;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  .search-wrap { flex: 1; max-width: 320px; position: relative; margin-left: auto; }
+  #searchInput {
+    width: 100%; height: 30px; background: var(--panel); border: 1px solid var(--glass-border);
+    border-radius: 15px; color: var(--ink); font-size: 12px; padding: 0 10px 0 28px; outline: none;
+  }
+  .search-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--dim); pointer-events: none; }
+  #channelCount { font-family: var(--font-mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
 
-    /* Broadcast TV Bug Logo (Top-Right Transparent Overlay) */
-    #tv-logo-overlay {
-      position: absolute;
-      top: max(14px, env(safe-area-inset-top));
-      right: max(14px, env(safe-area-inset-right));
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      z-index: 10000;
-      pointer-events: none;
-      opacity: 0.55;
-      background: rgba(20, 20, 20, 0.4);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      padding: 4px 9px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      transform-origin: top right;
-    }
+  /* ── MAIN MIDDLE CONTAINER ── */
+  #main-view {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 0;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
 
-    .logo-icon {
-      width: clamp(16px, 2vw, 20px);
-      height: clamp(16px, 2vw, 20px);
-      background: linear-gradient(135deg, rgba(255, 59, 48, 0.85), rgba(255, 149, 0, 0.85));
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
+  #categoryWrap {
+    flex: 0 0 50%;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--void2);
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
 
-    .logo-icon svg {
-      width: 65%;
-      height: 65%;
-      fill: #ffffff;
-    }
+  .scroll-hint-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-    .logo-text-container {
-      display: flex;
-      flex-direction: column;
-      line-height: 1;
-    }
+  #categoryBar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: auto;
+    scrollbar-color: var(--cyan) var(--panel2);
+  }
 
-    .logo-title {
-      font-size: clamp(9px, 1.1vw, 12px);
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      color: rgba(255, 255, 255, 0.9);
-      text-transform: uppercase;
-    }
+  #categoryBar::-webkit-scrollbar { width: 16px; }
+  #categoryBar::-webkit-scrollbar-track { background: var(--panel2); }
+  #categoryBar::-webkit-scrollbar-thumb {
+    background: var(--cyan); border-radius: 4px; border: 2px solid var(--panel2); box-shadow: 0 0 8px var(--cyan);
+  }
 
-    .logo-subtitle {
-      font-size: clamp(6px, 0.7vw, 8px);
-      font-weight: 500;
-      letter-spacing: 0.6px;
-      color: rgba(255, 215, 0, 0.85);
-      text-transform: uppercase;
-      margin-top: 1px;
-    }
+  .cat-pill {
+    display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700;
+    padding: 10px 14px; border-radius: 8px; cursor: pointer; border: 1px solid var(--glass-border);
+    background: var(--glass); color: var(--ink); text-align: left; white-space: nowrap; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cat-pill:hover, .cat-pill.active { background: var(--panel2); border-color: var(--cyan); color: #fff; }
+  .cat-pill .cat-n { font-family: var(--font-mono); font-size: 10px; opacity: .8; }
 
-    /* Loading Overlay & Spinner */
-    #loader-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      z-index: 9998;
-      pointer-events: none;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
+  #playerWrapper {
+    flex: 0 0 50%; width: 50%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; position: relative;
+  }
+  #playerArea { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 100%; background: #000; overflow: hidden; }
 
-    .spinner {
-      width: 54px;
-      height: 54px;
-      border: 4px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #ff3b30;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
+  #playerPlaceholder {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; background: radial-gradient(circle, #101426 0%, #06070b 100%); z-index: 2; text-align: center; padding: 10px;
+  }
+  #playerPlaceholder.hidden { opacity: 0; pointer-events: none; }
+  .ph-title { font-weight: 700; font-size: 15px; color: var(--ink); }
+  .ph-sub { font-size: 11px; color: var(--dim); margin-top: 4px; }
 
-    .loading-text {
-      color: #ffd700;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-    }
+  #httpNotice, #dashNotice {
+    position: absolute; inset: 0; z-index: 4; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px; background: rgba(4,5,9,.95); text-align: center; padding: 16px;
+  }
+  #httpNotice.show, #dashNotice.show { display: flex; }
+  .http-btn { background: var(--grad-signal); color: #000; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 700; cursor: pointer; font-size: 12px; }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+  #playerLoader { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(0,0,0,.7); opacity: 0; pointer-events: none; }
+  #playerLoader.show { opacity: 1; pointer-events: all; }
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,.1); border-top-color: var(--cyan); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Bottom Control Overlay */
-    #controls-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 0 16px calc(16px + env(safe-area-inset-bottom)) 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 9999;
-      transition: opacity 0.4s ease, visibility 0.4s ease;
-    }
+  #playerError { position: absolute; inset: 0; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.9); color: var(--dim); font-size: 12px; }
+  #playerError.show { display: flex; }
 
-    .ui-hidden {
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
+  #videoEl, #iframeEl { width: 100%; height: 100%; border: none; display: none; position: absolute; inset: 0; z-index: 1; background: #000; }
 
-    .controls-left, .controls-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+  /* ── GEO NOTICE MARQUEE ── */
+  #geoNotice {
+    width: 100%;
+    height: 26px;
+    min-height: 26px;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(90deg, rgba(61,242,255,.07), rgba(141,92,255,.07));
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+  }
+  #geoNotice::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, var(--void) 0%, transparent 4%, transparent 96%, var(--void) 100%);
+    z-index: 2; pointer-events: none;
+  }
+  .geo-track {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    animation: geo-scroll 26s linear infinite;
+    padding-left: 100%;
+    will-change: transform;
+  }
+  #geoNotice:hover .geo-track { animation-play-state: paused; }
+  .geo-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .2px;
+    color: var(--ink);
+    padding: 0 28px;
+  }
+  .geo-item .geo-ic { font-size: 12px; flex-shrink: 0; }
+  .geo-item .geo-accent { color: var(--cyan); font-weight: 700; }
+  .geo-item .geo-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--dim2); margin: 0 2px; flex-shrink: 0; }
+  @keyframes geo-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @media (max-width: 640px) {
+    .geo-item { font-size: 10px; padding: 0 18px; }
+    .geo-track { animation-duration: 20s; }
+  }
 
-    /* Sleek Round Icon Buttons */
-    .control-btn {
-      background: rgba(25, 25, 25, 0.55);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.85);
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      transition: background 0.2s, transform 0.1s;
-    }
+  #nowPlayingBar {
+    height: 28px; min-height: 28px; background: var(--void2); border-top: 1px solid var(--line);
+    display: none; align-items: center; padding: 0 12px; gap: 8px; font-size: 11px; flex-shrink: 0; width: 100%;
+  }
+  #nowPlayingBar.visible { display: flex; }
+  .np-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-live { margin-left: auto; color: var(--live); font-family: var(--font-mono); font-size: 9px; }
 
-    .control-btn svg {
-      width: 17px;
-      height: 17px;
-      fill: rgba(255, 255, 255, 0.9);
-    }
+  /* ── BOTTOM CHANNEL RIBBON ── */
+  #listWrap { flex-shrink: 0; height: 106px; min-height: 106px; background: var(--void); display: flex; flex-direction: column; width: 100%; overflow: hidden; }
+  #channelList { width: 100%; flex: 1; display: flex; flex-direction: row; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 6px 12px; align-items: center; }
 
-    .control-btn:active {
-      transform: scale(0.9);
-      background: rgba(50, 50, 50, 0.75);
-    }
+  .channel-row {
+    flex: 0 0 150px; height: 68px; background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: 8px; padding: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .15s;
+  }
+  .channel-row:hover, .channel-row.active { border-color: var(--cyan); background: var(--panel); transform: translateY(-2px); }
+  .row-logo { width: 36px; height: 36px; border-radius: 6px; object-fit: contain; background: var(--panel); flex-shrink: 0; }
+  .row-logo-fallback { width: 36px; height: 36px; border-radius: 6px; background: var(--panel); display: grid; place-items: center; font-size: 14px; flex-shrink: 0; }
+  .row-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .row-name { font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-cat { font-size: 9px; color: var(--dim2); }
+
+  .row-instruction { font-size: 8px; color: var(--gold); background: rgba(255,207,92,0.1); border: 1px solid rgba(255,207,92,0.2); border-radius: 4px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .empty-state { font-size: 12px; color: var(--dim); padding: 0 12px; font-weight: 500; }
+
+  #footer { background: rgba(8,10,15,0.98); border-top: 1px solid var(--line); padding: 8px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; flex-shrink: 0; }
+  .footer-top { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; width: 100%; }
+  .footer-left { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .footer-brand { font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: var(--cyan); }
+  .footer-sep { color: var(--dim2); }
+  .footer-copy { font-size: 11px; color: var(--dim); }
+  .footer-right { display: flex; align-items: center; gap: 10px; }
+  .footer-stat { font-family: var(--font-mono); font-size: 10px; color: var(--dim); }
+  #updateStatus { display: none !important; }
+  .footer-disclaimer { font-size: 9.5px; color: var(--dim); line-height: 1.3; text-align: center; max-width: 900px; margin: 0 auto; }
+  .footer-disclaimer strong { color: var(--gold); font-weight: 600; }
+
+  @media(max-width: 650px) {
+    #header { padding: 0 8px; }
+    .logo-text { font-size: 14px; }
+    #main-view { flex-direction: column; }
+    #categoryWrap { flex: 0 0 38%; width: 100%; height: 38%; border-right: none; border-bottom: 1px solid var(--line); }
+    #playerWrapper { flex: 1; width: 100%; height: 62%; }
+    .channel-row { flex: 0 0 135px; }
+    #footer { padding: 6px 10px; }
+    .footer-disclaimer { font-size: 8.5px; }
+  }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "MSTV Network",
+  "url": "https://crickethd.pages.dev/",
+  "description": "MSTV Network provides a categorized directory and player for live Indian, Punjabi, religious, entertainment and sports TV channels."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "MSTV Network",
+  "url": "https://crickethd.pages.dev/"
+}
+</script>
 </head>
 <body>
 
-  <div id="player-container">
-    <!-- Top-Left Status Display (always visible) -->
-    <div id="debug-status">Now Playing : Initializing...</div>
+<div id="app-container">
+  
+  <header id="header">
+    <a href="/" class="logo-mark" aria-label="MSTV Network home">
+      <div class="logo-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3df2ff"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="logo-text">MSTV</div>
+    </a>
+    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+    
+    <div class="search-wrap">
+      <svg class="search-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="search" placeholder="Search..." autocomplete="off" spellcheck="false">
+    </div>
+    <span id="channelCount">—</span>
+  </header>
 
-    <!-- Top-Right Transparent TV Watermark Overlay -->
-    <div id="tv-logo-overlay">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+  <main id="main-view">
+    <div id="categoryWrap">
+      <div class="scroll-hint-bar">
+        <span></span>
+        <span>SCROLL ↕️↕️</span>
       </div>
-      <div class="logo-text-container">
-        <span class="logo-title">APNA TV</span>
-        <span class="logo-subtitle">Ghar Jaisa</span>
-      </div>
+      <nav id="categoryBar" role="tablist" title="Scroll ⬆️ ⬇️"></nav>
     </div>
 
-    <!-- Centered Loader Spinner -->
-    <div id="loader-overlay">
-      <div class="spinner"></div>
-      <div class="loading-text">Please Wait</div>
+    <div id="playerWrapper">
+      <div id="playerArea" role="region" aria-label="Video player">
+        <div id="playerPlaceholder">
+          <div class="ph-title">CLICK ON CHANNEL LOGO TO PLAY</div>
+          <div class="ph-sub">Choose Category of your choice from top & enjoy!</div>
+        </div>
+
+        <div id="httpNotice" role="alert">
+          <div style="font-size:20px">🔓</div>
+          <div style="font-weight:700; color:var(--gold); font-size:13px">HTTP Stream</div>
+          <div style="font-size:10px; color:var(--dim)" id="httpDesc">Browser blocks HTTP media. Open directly to view.</div>
+          <button class="http-btn" id="httpOpenBtn">Open Stream</button>
+        </div>
+
+        <div id="dashNotice" role="alert">
+          <div style="font-size:20px">📱</div>
+          <div style="font-weight:700; font-size:12px" id="dashTitle">Opening in Player App…</div>
+          <div style="font-size:10px; color:var(--dim)" id="dashDesc">"<span id="dashChName"></span>" requires external iOS Player.</div>
+          <div id="dashFallbackBlock" style="display:none">
+            <button class="http-btn" id="dashRetryBtn">Try App Again</button>
+            <button class="http-btn" id="dashCopyBtn" style="margin-top:4px">Copy Link</button>
+          </div>
+        </div>
+
+        <div id="playerLoader"><div class="spinner"></div></div>
+        <div id="playerError" role="alert"><p id="playerErrorMsg">Stream error</p></div>
+
+        <video id="videoEl" controls playsinline preload="none"></video>
+        <iframe id="iframeEl" allow="autoplay; fullscreen; encrypted-media" allowfullscreen title="Stream player"></iframe>
+      </div>
     </div>
+  </main>
 
-    <!-- Media Elements -->
-    <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline></video>
-    <iframe id="iframe-player" class="media-element" style="display: none;"></iframe>
-
-    <!-- Bottom Controls -->
-    <div id="controls-overlay">
-      <div class="controls-left">
-        <button id="btn-play" class="control-btn" aria-label="Play/Pause">
-          <svg id="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          <svg id="icon-play" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-
-        <button id="btn-mute" class="control-btn" aria-label="Mute/Unmute">
-          <svg id="icon-muted" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-          <svg id="icon-unmuted" viewBox="0 0 24 24" style="display:none;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        </button>
-      </div>
-
-      <div class="controls-right">
-        <button id="btn-fullscreen" class="control-btn" aria-label="Fullscreen">
-          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-        </button>
-      </div>
+  <div id="geoNotice" role="note" aria-label="Geo-restriction notice">
+    <div class="geo-track" id="geoTrack">
+      <!-- duplicated content block for seamless loop; populated x2 below -->
     </div>
   </div>
+
+  <div id="nowPlayingBar">
+    <div id="npLogoWrap"></div>
+    <div class="np-name" id="npName">—</div>
+    <div class="np-live">● LIVE</div>
+  </div>
+
+  <section id="listWrap">
+    <div class="scroll-hint-bar">
+      <span></span>
+      <span>SCROLL ↔️↔️</span>
+    </div>
+    <div id="channelList" role="list" title="Scroll ⬅️ ➡️"></div>
+  </section>
+
+  <footer id="footer">
+      <div class="footer-top">
+        <div class="footer-left">
+          <span class="footer-brand">MSTV</span>
+          <span class="footer-sep" aria-hidden="true">|</span>
+          <span class="footer-copy">© 2026 MSTV Live Network. All rights reserved.</span>
+        </div>
+        <div class="footer-right">
+          <div class="footer-stat"><strong id="footerCount">—</strong></div>
+          <div id="updateStatus" aria-live="polite">
+            <span class="update-dot" aria-hidden="true"></span>
+            <span id="updateText">Syncing…</span>
+          </div>
+        </div>
+      </div>
+      <div class="footer-disclaimer">
+        <strong>⚠ Disclaimer:</strong>&nbsp; All content displayed on MSTV is sourced exclusively from streams
+        that are publicly available on the internet. <strong>We do not host, upload, store, or transmit any media files on our servers.</strong>
+      </div>
+  </footer>
+</div>
   <script>
-    const PLAYLIST_URL = './playlist.json';
-    const FETCH_INTERVAL_MS = 2000;
-    const SYNC_CHECK_INTERVAL_MS = 500;
-    const MAX_ALLOWED_DRIFT_SEC = 0.5;
-    const UI_HIDE_TIMEOUT_MS = 3000;
+const CURRENT_VERSION = "v2.6.0"; 
 
-    const container = document.getElementById('player-container');
-    const videoElem = document.getElementById('native-player');
-    const iframeElem = document.getElementById('iframe-player');
-    const debugElem = document.getElementById('debug-status');
-    const loaderElem = document.getElementById('loader-overlay');
-    const controlsOverlay = document.getElementById('controls-overlay');
+// ── WORKER CONFIGURATION ──────────────────────────────────────────────────
+// Primary and Backup Workers for Load Balancing & Multi-Account Failover
+const WORKER_ENDPOINTS = [
+  "https://main.ghubtv1.workers.dev",
+  "https://backup1.cabletv.workers.dev",
+  "https://backup2.changetv65.workers.dev",
+  "https://backup3.mstvindianetworkusa.workers.dev",
+  "https://backup4.choudhrym840.workers.dev",
+  "https://backup5.tonycameron059.workers.dev"
 
-    const btnPlay = document.getElementById('btn-play');
-    const iconPlay = document.getElementById('icon-play');
-    const iconPause = document.getElementById('icon-pause');
+];
 
-    const btnMute = document.getElementById('btn-mute');
-    const iconMuted = document.getElementById('icon-muted');
-    const iconUnmuted = document.getElementById('icon-unmuted');
+// ── DEAD-ACCOUNT SKIPPER ─────────────────────────────────────────────────
+// Tracks which worker endpoints are currently failing (e.g. free-tier quota
+// exhausted, account suspended, etc.) and automatically routes around them.
+// A "dead" endpoint is skipped for COOLDOWN_MS, then given another chance
+// in case the quota reset (daily reset, temporary block lifted, etc.).
 
-    const btnFullscreen = document.getElementById('btn-fullscreen');
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes before retrying a dead endpoint
+const FAIL_THRESHOLD = 2;          // consecutive failures before marking dead
 
-    let playlist = [];
-    let hlsInstance = null;
-    let currentItem = null;
-    let totalPlaylistDuration = 0;
-    let uiHideTimer = null;
+const workerHealth = WORKER_ENDPOINTS.map(() => ({
+  fails: 0,
+  deadUntil: 0 // timestamp (ms) until which this endpoint is skipped
+}));
 
-    videoElem.muted = true;
+function isEndpointAlive(idx) {
+  return Date.now() >= workerHealth[idx].deadUntil;
+}
 
-    function hideLoader() {
-      loaderElem.classList.add('ui-hidden');
-    }
-    function showLoader() {
-      loaderElem.classList.remove('ui-hidden');
-    }
+function markEndpointSuccess(idx) {
+  workerHealth[idx].fails = 0;
+  workerHealth[idx].deadUntil = 0;
+}
 
-    videoElem.addEventListener('playing', hideLoader);
-    videoElem.addEventListener('waiting', showLoader);
-    videoElem.addEventListener('seeking', showLoader);
-    videoElem.addEventListener('seeked', () => {
-      if (!videoElem.paused) hideLoader();
+function markEndpointFailure(idx) {
+  const h = workerHealth[idx];
+  h.fails++;
+  if (h.fails >= FAIL_THRESHOLD) {
+    h.deadUntil = Date.now() + COOLDOWN_MS;
+    console.warn(`[Worker Skipper] Marking endpoint dead for ${COOLDOWN_MS / 1000}s: ${WORKER_ENDPOINTS[idx]}`);
+  }
+}
+
+// Returns an ordered list of endpoint indices to try: alive ones first
+// (random order among themselves so load still balances), then dead ones
+// last as a final fallback (better to try a "dead" endpoint than show nothing).
+function getWorkerTryOrder() {
+  const indices = WORKER_ENDPOINTS.map((_, i) => i);
+  const alive = indices.filter(isEndpointAlive);
+  const dead = indices.filter(i => !isEndpointAlive(i));
+
+  // Shuffle each group independently to keep load balanced across accounts
+  const shuffle = arr => arr.sort(() => Math.random() - 0.5);
+  return [...shuffle(alive), ...shuffle(dead)];
+}
+
+// Kept for any external callers, now returns the top pick from the skipper.
+function getActiveWorkerUrl() {
+  const order = getWorkerTryOrder();
+  return WORKER_ENDPOINTS[order[0]];
+}
+
+const streamCache = {}; // Local memory cache
+
+const JSON_URL      = './streamdata2.json';
+const POLL_INTERVAL = 30000; // was 1500ms — 1.5s polling was the #1 cause of quota exhaustion
+const SANDBOX_VALUE = 'allow-scripts allow-same-origin allow-presentation allow-forms';
+
+const CATEGORY_CONFIG = [];
+// Place this at the top of your script near your other global "let" declarations
+let streamRetryCount = 0;
+const MAX_STREAM_RETRIES = 3; 
+
+let channels = [], filteredChannels = [], currentChannel = null;
+let searchQuery = '', activeCategory = 'All', hlsInstance = null, shakaPlayer = null, shakaReady = false, shakaLoading = null, pollTimer = null, lastJsonRaw = '', fetchController = null;
+
+let mstvPopupWindow = null;
+
+const $searchInput = document.getElementById('searchInput');
+const $channelList = document.getElementById('channelList');
+const $channelCount = document.getElementById('channelCount');
+const $videoEl = document.getElementById('videoEl');
+const $iframeEl = document.getElementById('iframeEl');
+const $playerPlaceholder = document.getElementById('playerPlaceholder');
+const $playerLoader = document.getElementById('playerLoader');
+const $playerError = document.getElementById('playerError');
+const $playerErrorMsg = document.getElementById('playerErrorMsg');
+const $httpNotice = document.getElementById('httpNotice');
+const $httpOpenBtn = document.getElementById('httpOpenBtn');
+const $httpDesc = document.getElementById('httpDesc');
+const $dashNotice = document.getElementById('dashNotice');
+const $dashChName = document.getElementById('dashChName');
+const $dashFallbackBlock = document.getElementById('dashFallbackBlock');
+const $dashRetryBtn = document.getElementById('dashRetryBtn');
+const $dashCopyBtn = document.getElementById('dashCopyBtn');
+const $nowPlayingBar = document.getElementById('nowPlayingBar');
+const $npName = document.getElementById('npName');
+const $updateText = document.getElementById('updateText');
+const $categoryBar = document.getElementById('categoryBar');
+const $geoTrack = document.getElementById('geoTrack');
+
+// ── GEO NOTICE MARQUEE ────────────────────────────────────────────────────
+// Purely informational scrolling ticker beneath the player. Duplicated once
+// so the CSS translateX(-50%) loop is seamless with no visible seam/jump.
+function initGeoNotice() {
+  if (!$geoTrack) return;
+  const items = [
+    { ic: '🌐', html: 'Some channels are <span class="geo-accent">geo-restricted</span> in your region' },
+    { ic: '🛡️', html: 'Use a <span class="geo-accent">free or paid VPN</span> from the Google Play Store to unlock them' },
+    { ic: '📡', html: 'Switching your VPN server location can help load blocked channels' },
+    { ic: '✅', html: 'Refresh Webpage — To see newly added channels refresh webpage 3-4 times ' },
+  ];
+  const renderSet = () => items.map(i =>
+    `<span class="geo-item"><span class="geo-ic">${i.ic}</span>${i.html}</span><span class="geo-dot"></span>`
+  ).join('');
+  $geoTrack.innerHTML = renderSet() + renderSet(); // duplicate for seamless loop
+}
+
+const chKey = ch => ch.id || ch.name;
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const isHttp = u => /^http:\/\//i.test((u||'').trim());
+const catOf = ch => (ch.category || 'General').trim();
+
+// Strict Mobile Detector
+const isStrictMobile = () => {
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Android|iPhone|iPod/i.test(ua);
+  const isTabletUA = /iPad|Android(?!.*Mobile)|Silk|PlayBook|Tablet/i.test(ua);
+  const maxDimension = Math.max(window.screen.width, window.screen.height);
+
+  return isMobileUA && !isTabletUA && maxDimension < 1024;
+};
+
+const isIOS = (() => {
+  const ua = navigator.userAgent || '';
+  const isAppleMobile = /iPad|iPhone|iPod/.test(ua);
+  const isiPadOS = (navigator.platform === 'MacIntel' || navigator.platform === 'Macintosh') && navigator.maxTouchPoints > 0;
+  return isAppleMobile || isiPadOS;
+})();
+
+const isDashStream = (type, url) => (type||'').toLowerCase() === 'dash' || /\.mpd(\?|$)/i.test(url||'');
+
+// Fallback heuristic (adapted from B4U engine): only used when a channel has
+// no explicit `type` field, to guess whether a bare URL is an embeddable
+// page rather than a direct media stream. Never overrides an explicit type.
+const looksLikeIframeUrl = (url) => {
+  const u = (url || '').trim();
+  if (!u) return false;
+  return u.includes('/embed/') ||
+         u.includes('player.vimeo.com') ||
+         u.includes('youtube.com/embed') ||
+         (
+           !u.includes('.m3u8') &&
+           !u.includes('.mpd') &&
+           !u.includes('.mp4') &&
+           u.startsWith('http') &&
+           !/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(u) &&
+           !/manifest/i.test(u)
+         );
+};
+
+/**
+ * Fetches stream URL dynamically from Worker by Channel ID (No client secret key needed)
+ */
+async function getStreamUrl(channel) {
+  const key = channel.id || channel.name;
+
+  if (streamCache[key]) {
+    console.log(`[Local Cache Hit] Serving channel link locally for: ${channel.name}`);
+    return streamCache[key];
+  }
+
+  if (!channel.id) {
+    console.warn(`No target channel ID found in data structure for "${channel.name}".`);
+    return null;
+  }
+
+  const tryOrder = getWorkerTryOrder();
+  const aliveFirst = tryOrder.filter(isEndpointAlive);
+  const racePool = aliveFirst.slice(0, 2); // race top 2 alive endpoints in parallel
+  const remainder = tryOrder.filter(i => !racePool.includes(i));
+
+  const fetchOne = async (idx) => {
+    const workerBaseUrl = WORKER_ENDPOINTS[idx];
+    const res = await fetch(`${workerBaseUrl}/hls/${channel.id}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      cache: 'default' // allows the Worker's own edge-cached response to be reused
     });
+    if (!res.ok) { markEndpointFailure(idx); throw new Error(`Worker status ${res.status}`); }
+    const data = await res.json();
+    if (!data || !data.url) { markEndpointFailure(idx); throw new Error('Worker returned no stream url'); }
+    markEndpointSuccess(idx);
+    streamCache[key] = data.url;
+    return data.url;
+  };
 
-    iframeElem.addEventListener('load', hideLoader);
-
-    // --- 1. Aggressive JSON Fetching (Safely Updated) ---
-    async function fetchPlaylist() {
-      try {
-        const response = await fetch(`${PLAYLIST_URL}?cachebuster=${Date.now()}`, { cache: 'no-store' });
-        if (!response.ok) {
-          debugElem.textContent = `Now Playing : Error (HTTP ${response.status})`;
-          return;
-        }
-        const data = await response.json();
-        
-        if (Array.isArray(data) && data.length > 0) {
-          if (JSON.stringify(data) !== JSON.stringify(playlist)) {
-            // If nothing is playing yet, initialize immediately
-            if (!currentItem) {
-              playlist = data;
-              totalPlaylistDuration = playlist.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
-              syncEngine();
-            } else {
-              // Queue update safely: update the array and duration for future slots, 
-              // but do NOT trigger an immediate reset/jump on the currently running video.
-              playlist = data;
-              totalPlaylistDuration = playlist.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
-              console.log("Playlist updated in background. Current video will finish its course first.");
-            }
-          }
-        }
-      } catch (e) {
-        debugElem.textContent = `Now Playing : Fetch Error`;
-      }
+  // Race the fastest alive endpoints first — if the "primary" is slow or
+  // dead, a healthy backup wins instantly instead of waiting out a timeout.
+  if (racePool.length) {
+    try {
+      return await Promise.any(racePool.map(idx =>
+        fetchOne(idx).catch(e => { console.warn(`[Worker Skipper] ${WORKER_ENDPOINTS[idx]} failed`, e); throw e; })
+      ));
+    } catch (e) {
+      // AggregateError from Promise.any — both racers failed, fall through
     }
-    setInterval(fetchPlaylist, FETCH_INTERVAL_MS);
-    fetchPlaylist();
+  }
 
-    // --- 2. Live Broadcast Time Logic ---
-    function getGlobalTimeState() {
-      if (!totalPlaylistDuration || totalPlaylistDuration === 0) return null;
-      
-      const epochSeconds = Date.now() / 1000;
-      const currentLoopTime = epochSeconds % totalPlaylistDuration;
-
-      let accumulatedTime = 0;
-      for (let i = 0; i < playlist.length; i++) {
-        const item = playlist[i];
-        if (currentLoopTime >= accumulatedTime && currentLoopTime < accumulatedTime + item.duration_seconds) {
-          return {
-            itemIndex: i,
-            item: item,
-            seekPosition: currentLoopTime - accumulatedTime
-          };
-        }
-        accumulatedTime += item.duration_seconds;
-      }
-      return null;
+  // Serial fallback: remaining alive endpoints, then dead ones as last resort
+  let lastError = null;
+  for (const idx of remainder) {
+    try {
+      return await fetchOne(idx);
+    } catch (e) {
+      lastError = e;
+      console.warn(`[Worker Skipper] ${WORKER_ENDPOINTS[idx]} failed, trying next endpoint...`, e);
     }
+  }
 
-    // --- 3. Strict Live Drift Lock & Top Box Updater ---
-    function syncEngine() {
-      const state = getGlobalTimeState();
-      if (!state) return;
+  console.error("Failed to fetch stream URL from any worker endpoint:", lastError);
+  return null;
+}
 
-      const { item, seekPosition } = state;
-      const displayName = item.name ? item.name : `Video ${state.itemIndex + 1}`;
 
-      debugElem.textContent = `Now Playing : ${displayName}`;
+function attemptOpenInApp(url, onFail) {
+  let settled = false;
+  const vlcUrl = 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url);
+  const cleanup = () => {
+    document.removeEventListener('visibilitychange', onVis);
+    window.removeEventListener('blur', cleanup);
+  };
+  const onVis = () => { if (document.hidden) { settled = true; cleanup(); } };
+  document.addEventListener('visibilitychange', onVis);
+  window.addEventListener('blur', cleanup);
+  window.location.href = vlcUrl;
+  setTimeout(() => { cleanup(); if (!settled) onFail(); }, 1800);
+}
 
-      // If we don't have an active stream running, start it
-      if (!currentItem) {
-        currentItem = item;
-        showLoader();
-        loadMediaSource(item, seekPosition);
-        return;
-      }
+function waitForHls() {
+  return new Promise(resolve => {
+    if (typeof Hls !== 'undefined') return resolve();
+    const c = setInterval(() => { if (typeof Hls !== 'undefined') { clearInterval(c); resolve(); } }, 50);
+  });
+}
 
-      // If a new URL/item has naturally rolled in by timeline clock sequence:
-      if (currentItem.url !== item.url) {
-        currentItem = item;
-        showLoader();
-        loadMediaSource(item, seekPosition);
-        return;
-      }
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  });
+}
 
-      // Maintain live-sync drift for active streams
-      if (item.type === 'mp4' || item.type === 'm3u8') {
-        const drift = Math.abs(videoElem.currentTime - seekPosition);
-        if (drift > MAX_ALLOWED_DRIFT_SEC) {
-          videoElem.currentTime = seekPosition;
-        }
+async function ensureShaka() {
+  if (shakaReady) return;
+  if (!shakaLoading) {
+    shakaLoading = (async () => {
+      if (typeof shaka === 'undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/shaka-player.compiled.js');
+      shaka.polyfill.installAll();
+      shakaPlayer = new shaka.Player();
+      shakaPlayer.configure({ streaming: { bufferingGoal: 10, rebufferingGoal: 2 } });
+      await shakaPlayer.attach($videoEl);
+      shakaReady = true;
+    })();
+  }
+  return shakaLoading;
+}
 
-        if (videoElem.paused && iconPlay.style.display === 'none') {
-          videoElem.play().catch(() => {});
-        }
-      }
-    }
-    setInterval(syncEngine, SYNC_CHECK_INTERVAL_MS);
+function updateChannelStructuredData(list) {
+  let node = document.getElementById('channel-itemlist-schema');
+  if (!node) {
+    node = document.createElement('script');
+    node.type = 'application/ld+json';
+    node.id = 'channel-itemlist-schema';
+    document.head.appendChild(node);
+  }
 
-    // --- 4. Switch Media Types (MP4, HLS, iFrame) ---
-    function loadMediaSource(item, initialSeek) {
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
+  const items = (Array.isArray(list) ? list : [])
+    .filter(ch => ch && ch.name)
+    .slice(0, 100)
+    .map((ch, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: String(ch.name)
+    }));
 
-      if (item.type === 'iframe') {
-        videoElem.style.display = 'none';
-        videoElem.pause();
-        iframeElem.style.display = 'block';
-        iframeElem.src = item.url;
-      } else {
-        iframeElem.style.display = 'none';
-        iframeElem.src = '';
-        videoElem.style.display = 'block';
+  node.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'MSTV Network Live TV Channels',
+    numberOfItems: items.length,
+    itemListElement: items
+  });
+}
 
-        if (item.type === 'm3u8') {
-          if (Hls.isSupported()) {
-            hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
+async function init() {
+  initGeoNotice();
+  await loadChannels(false);
+  startPolling();
+  bindEvents();
+}
 
-            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-              if (data.fatal) {
-                debugElem.textContent = `Now Playing : Stream Error (${data.type})`;
-                hideLoader();
-              }
-            });
-
-            hlsInstance.loadSource(item.url);
-            hlsInstance.attachMedia(videoElem);
-            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-              videoElem.currentTime = initialSeek;
-              videoElem.play().catch(() => {});
-            });
-          } else if (videoElem.canPlayType('application/vnd.apple.mpegurl')) {
-            videoElem.src = item.url;
-            videoElem.currentTime = initialSeek;
-            videoElem.play().catch(() => {});
-          }
-        } else if (item.type === 'mp4') {
-          videoElem.src = item.url;
-          videoElem.currentTime = initialSeek;
-          videoElem.play().catch(() => {});
-        }
-      }
-    }
-
-    // --- 5. Auto Fade Control Overlay (status box stays visible always) ---
-    function showControls() {
-      controlsOverlay.classList.remove('ui-hidden');
-      
-      clearTimeout(uiHideTimer);
-      uiHideTimer = setTimeout(() => {
-        controlsOverlay.classList.add('ui-hidden');
-      }, UI_HIDE_TIMEOUT_MS);
-    }
-
-    container.addEventListener('mousemove', showControls);
-    container.addEventListener('click', showControls);
-    container.addEventListener('touchstart', showControls, { passive: true });
-    container.addEventListener('pointerdown', showControls, { passive: true });
-    container.addEventListener('pointermove', showControls, { passive: true });
-    document.addEventListener('mousemove', showControls);
-    document.addEventListener('pointerdown', showControls, { passive: true });
-    showControls();
-
-    // Button Click Handlers
-    btnPlay.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (videoElem.paused) {
-        videoElem.play();
-        iconPlay.style.display = 'none';
-        iconPause.style.display = 'block';
-      } else {
-        videoElem.pause();
-        iconPlay.style.display = 'block';
-        iconPause.style.display = 'none';
-      }
+async function loadChannels(silent) {
+  if (fetchController) fetchController.abort();
+  fetchController = new AbortController();
+  try {
+    // No cache-buster, no no-store headers — this lets Cloudflare's edge
+    // cache serve this file (see _headers: max-age=10, s-maxage=30) instead
+    // of every visitor hitting origin on every poll.
+    const res = await fetch(JSON_URL, {
+      signal: fetchController.signal,
+      cache: 'default'
     });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
 
-    btnMute.addEventListener('click', (e) => {
-      e.stopPropagation();
-      videoElem.muted = !videoElem.muted;
-      if (videoElem.muted) {
-        iconMuted.style.display = 'block';
-        iconUnmuted.style.display = 'none';
-      } else {
-        iconMuted.style.display = 'none';
-        iconUnmuted.style.display = 'block';
-      }
-    });
+    if (text === lastJsonRaw) { 
+      updateTimestamp(); 
+      return; 
+    }
+    
+    let data = JSON.parse(text);
+    if (!Array.isArray(data)) data = data.channels || Object.values(data);
+    
+    lastJsonRaw = text;
 
-    btnFullscreen.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        if (container.requestFullscreen) {
-          container.requestFullscreen();
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
-        } else if (videoElem.webkitEnterFullscreen) {
-          videoElem.webkitEnterFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
-      }
-    });
+    // Clear local memory cache on list reload
+    Object.keys(streamCache).forEach(key => delete streamCache[key]);
 
-    // Anti-Bypass Seeking Revert Logic
-    videoElem.addEventListener('seeking', () => {
-      const state = getGlobalTimeState();
-      if (state && (state.item.type === 'mp4' || state.item.type === 'm3u8')) {
-        const drift = Math.abs(videoElem.currentTime - state.seekPosition);
-        if (drift > MAX_ALLOWED_DRIFT_SEC) {
-          videoElem.currentTime = state.seekPosition;
-        }
+    channels = data.filter(c => c && c.name).map(c => ({ ...c, category: catOf(c) }));
+    updateChannelStructuredData(channels);
+    
+    fullRender();
+    updateTimestamp();
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    $updateText.textContent = 'Error';
+  }
+}
+
+function startPolling() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => { loadChannels(true); }, POLL_INTERVAL);
+}
+
+function updateTimestamp() {
+  $updateText.textContent = 'Synced ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+function applyFilters() {
+  const q = searchQuery.toLowerCase().trim();
+  filteredChannels = channels.filter(ch => {
+    const nameOk = !q || ch.name.toLowerCase().includes(q);
+    const catOk  = !activeCategory || activeCategory === 'All' || catOf(ch).toLowerCase() === activeCategory.toLowerCase();
+    return nameOk && catOk;
+  });
+}
+
+function renderCategoryBar() {
+  const counts = { All: channels.length };
+  channels.forEach(ch => { const c = catOf(ch); counts[c] = (counts[c]||0) + 1; });
+  
+  const dynamicCats = Object.keys(counts).filter(c => !CATEGORY_CONFIG.some(item => item.id.toLowerCase() === c.toLowerCase()));
+  
+  const allCats = [
+    ...CATEGORY_CONFIG,
+    ...dynamicCats.map(c => ({ id: c, icon: '📺' }))
+  ];
+
+  $categoryBar.innerHTML = allCats.map(item => {
+    const cat = item.id;
+    const count = counts[cat] || 0;
+    if (cat !== 'All' && count === 0) return '';
+    const isActive = activeCategory && activeCategory.toLowerCase() === cat.toLowerCase();
+    return `<button class="cat-pill${isActive?' active':''}" data-cat="${esc(cat)}">
+      <span>${item.icon} ${esc(cat)}</span> <span class="cat-n">(${count})</span>
+    </button>`;
+  }).join('');
+  
+  $categoryBar.querySelectorAll('.cat-pill').forEach(btn => btn.addEventListener('click', () => {
+    activeCategory = btn.dataset.cat;
+    fullRender();
+  }));
+}
+
+function fullRender() {
+  applyFilters();
+  renderCategoryBar();
+  renderList();
+  $channelCount.textContent = (filteredChannels.length + ' Channels');
+}
+
+function renderList() {
+  if (!filteredChannels.length) {
+    $channelList.innerHTML = `<div class="empty-state">No channels found.</div>`;
+    return;
+  }
+
+  const activeKey = currentChannel ? chKey(currentChannel) : null;
+  $channelList.innerHTML = filteredChannels.map((ch, i) => {
+    const isActive = chKey(ch) === activeKey;
+    const instructionText = ch.instructions || ch.instruction || ch.note || '';
+    const instructionHtml = instructionText ? `<div class="row-instruction">${esc(instructionText)}</div>` : '';
+    
+    return `<div class="channel-row${isActive?' active':''}" data-idx="${i}">
+      ${logo(ch)}
+      <div class="row-info">
+        <div class="row-name" title="${esc(ch.name)}">${esc(ch.name)}</div>
+        <div class="row-cat">${esc(catOf(ch))}</div>
+        ${instructionHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  $channelList.querySelectorAll('.channel-row').forEach(el => {
+    el.addEventListener('click', () => playChannel(filteredChannels[+el.dataset.idx]));
+  });
+}
+
+function logo(ch) {
+  return ch.logo
+    ? `<img class="row-logo" src="${esc(ch.logo)}" alt="${esc(ch.name)} logo" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+       <div class="row-logo-fallback" style="display:none">📺</div>`
+    : `<div class="row-logo-fallback">📺</div>`;
+}
+
+function openPopUpStream(ch, targetUrl) {
+  const topShift = ch.cropTop || '-42px';
+  const leftShift = ch.cropLeft || '35px';
+  const zoomLevel = ch.cropZoom || '80%';
+  const title = esc(ch.name);
+  const safeTargetUrl = esc(targetUrl);
+  const tickerText = esc(ch.tickerText || ch.instructions || ch.note || '🔴 MSTV LIVE NETWORK — Thank you for watching!');
+
+  const isPrivate = ch.access === 'private';
+  const windowFeatures = 'width=920,height=580,resizable=yes,scrollbars=no,status=no';
+
+  if (mstvPopupWindow && !mstvPopupWindow.closed) {
+    mstvPopupWindow.close();
+  }
+
+  mstvPopupWindow = _nativeOpen('about:blank', 'MSTVPopUpWindow', windowFeatures);
+
+  if (!mstvPopupWindow) {
+    alert('Pop-up was blocked by browser! Please allow pop-ups for this site.');
+    return;
+  }
+
+  const popupHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} - MSTV Stream</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { margin: 0; padding: 0; background: #06070b; color: #f2f4fb; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; width: 100%; height: 100vh; display: flex; flex-direction: column; }
+    .popup-header { height: 38px; background: #0f1220; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; padding: 0 12px; gap: 10px; flex-shrink: 0; }
+    .popup-header .title { font-size: 13px; font-weight: 700; color: #fff; }
+    .align-btn { background: rgba(61, 242, 255, 0.15); color: #3df2ff; border: 1px solid rgba(61, 242, 255, 0.4); border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; margin-left: auto; }
+    .align-btn:hover { background: #3df2ff; color: #000; }
+    .ticker-wrap { height: 24px; background: #000; border-bottom: 1px solid rgba(255,255,255,0.1); overflow: hidden; display: flex; align-items: center; flex-shrink: 0; }
+    .ticker { display: inline-block; white-space: nowrap; padding-left: 100%; animation: marquee 22s linear infinite; font-size: 11px; font-weight: 600; color: #3df2ff; }
+    @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+    .crop-viewport-wrapper { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; background: #000; position: relative; }
+    .crop-viewport { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    .crop-viewport iframe { position: absolute; top: ${topShift}; left: ${leftShift}; width: ${zoomLevel}; height: ${zoomLevel}; border: 0; }
+    
+    #alignerPanel { display: none; position: absolute; bottom: 10px; right: 10px; z-index: 9999; background: rgba(15,18,32,0.95); border: 1px solid #3df2ff; border-radius: 8px; padding: 10px; width: 220px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 11px; color: #fff; }
+    #alignerPanel.active { display: block; }
+    .align-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 8px 0; text-align: center; }
+    .align-grid button, .zoom-controls button { background: #151933; color: #3df2ff; border: 1px solid rgba(255,255,255,0.1); padding: 5px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .align-grid button:hover, .zoom-controls button:hover { background: #3df2ff; color: #000; }
+    .zoom-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .copy-btn { width: 100%; background: #33ff9b; color: #000; border: none; padding: 6px; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; margin-top: 4px; }
+    .copy-btn:hover { background: #28cb7a; }
+  </style>
+</head>
+<body>
+  <header class="popup-header">
+    <span class="title">📺 ${title}</span>
+    ${isPrivate ? `<button class="align-btn" id="toggleAligner">🎯 Align Stream</button>` : ''}
+  </header>
+  <div class="ticker-wrap"><div class="ticker">${tickerText}</div></div>
+  <div class="crop-viewport-wrapper">
+    <div class="crop-viewport">
+      <iframe id="popFrame" src="${safeTargetUrl}" referrerpolicy="no-referrer" scrolling="no" allowfullscreen></iframe>
+    </div>
+    
+    ${isPrivate ? `
+    <div id="alignerPanel">
+      <div style="font-weight:bold; color:#3df2ff; margin-bottom:4px; display:flex; justify-content:space-between;">
+        <span>Stream Aligner</span>
+        <span id="closeAligner" style="cursor:pointer; color:#8790ac;">✕</span>
+      </div>
+      <div class="zoom-controls">
+        <span>Zoom: <strong id="valZoom">${zoomLevel}</strong></span>
+        <div>
+          <button id="btnZoomOut">-</button>
+          <button id="btnZoomIn">+</button>
+        </div>
+      </div>
+      <div class="align-grid">
+        <div></div><button id="btnUp">▲</button><div></div>
+        <button id="btnLeft">◄</button><button id="btnReset">R</button><button id="btnRight">►</button>
+        <div></div><button id="btnDown">▼</button><div></div>
+      </div>
+      <div style="font-size:9px; color:#8790ac; margin-bottom:4px;">Top: <span id="valTop">${topShift}</span> | Left: <span id="valLeft">${leftShift}</span></div>
+      <button class="copy-btn" id="btnCopyJson">📋 Copy JSON</button>
+    </div>` : ''}
+  </div>
+
+  <script>
+    (function() {
+      const isPrivate = ${isPrivate};
+      if (!isPrivate) return;
+
+      const iframe = document.getElementById('popFrame');
+      const panel = document.getElementById('alignerPanel');
+      const toggleBtn = document.getElementById('toggleAligner');
+      const closeBtn = document.getElementById('closeAligner');
+
+      let topVal = parseInt("${topShift}") || 0;
+      let leftVal = parseInt("${leftShift}") || 0;
+      let zoomVal = parseInt("${zoomLevel}") || 100;
+
+      function updateStyles() {
+        iframe.style.top = topVal + 'px';
+        iframe.style.left = leftVal + 'px';
+        iframe.style.width = zoomVal + '%';
+        iframe.style.height = zoomVal + '%';
+
+        document.getElementById('valTop').textContent = topVal + 'px';
+        document.getElementById('valLeft').textContent = leftVal + 'px';
+        document.getElementById('valZoom').textContent = zoomVal + '%';
       }
-    });
-      </script>
+
+      if (toggleBtn) {
+        toggleBtn.onclick = () => panel.classList.toggle('active');
+      }
+      if (closeBtn) {
+        closeBtn.onclick = () => panel.classList.remove('active');
+      }
+
+      document.getElementById('btnUp').onclick = () => { topVal -= 5; updateStyles(); };
+      document.getElementById('btnDown').onclick = () => { topVal += 5; updateStyles(); };
+      document.getElementById('btnLeft').onclick = () => { leftVal -= 5; updateStyles(); };
+      document.getElementById('btnRight').onclick = () => { leftVal += 5; updateStyles(); };
+      document.getElementById('btnReset').onclick = () => { topVal = 0; leftVal = 0; zoomVal = 100; updateStyles(); };
+
+      document.getElementById('btnZoomIn').onclick = () => { zoomVal += 2; updateStyles(); };
+      document.getElementById('btnZoomOut').onclick = () => { zoomVal = Math.max(10, zoomVal - 2); updateStyles(); };
+
+      document.getElementById('btnCopyJson').onclick = () => {
+        const jsonSnippet = \`"cropTop": "\${topVal}px",\\n"cropLeft": "\${leftVal}px",\\n"cropZoom": "\${zoomVal}%"\`;
+        navigator.clipboard.writeText(jsonSnippet).then(() => {
+          const btn = document.getElementById('btnCopyJson');
+          btn.textContent = '✅ Copied!';
+          setTimeout(() => btn.textContent = '📋 Copy JSON', 1500);
+        });
+      };
+    })();
+  <\/script>
 </body>
-</html>
+</html>`;
 
-              
+  mstvPopupWindow.document.open();
+  mstvPopupWindow.document.write(popupHtml);
+  mstvPopupWindow.document.close();
+  mstvPopupWindow.focus();
+}
+
+async function playChannel(ch) {
+  if (!ch) return;
+  
+  // If switching to a completely new channel selection, reset the crash counter
+  if (!currentChannel || (ch.id !== currentChannel.id)) {
+    streamRetryCount = 0; 
+  }
+  
+  currentChannel = ch;
+  renderList();
+  // ... (keep the rest of your loading visual changes the same)
+
+
+  $playerPlaceholder.classList.add('hidden');
+  $playerError.classList.remove('show');
+  $httpNotice.classList.remove('show');
+  $dashNotice.classList.remove('show');
+  showLoader(true);
+
+  await teardown();
+
+  const type = (ch.type || '').toLowerCase();
+
+  if (type === 'popup' || ch.popup === true) {
+    const popupRestriction = (ch.popupRestriction || 'restricted').toLowerCase();
+    const fallbackMessage = ch.popupFallbackMsg || 
+      "📱 Mobile Access Only: This stream is optimized for mobile viewing and cannot be played on desktop or tablet devices. Please open this link on your mobile phone to watch live.";
+
+    if (popupRestriction === 'restricted' && !isStrictMobile()) {
+      showError(fallbackMessage);
+      updateNowPlaying(ch);
+      return;
+    }
+  }
+
+  const streamUrl = await getStreamUrl(ch);
+  if (!streamUrl) {
+    showError("Failed to fetch stream URL from worker");
+    return;
+  }
+
+  if (type === 'popup' || ch.popup === true) {
+    showLoader(false);
+    $videoEl.style.display = $iframeEl.style.display = 'none';
+    openPopUpStream(ch, streamUrl);
+    updateNowPlaying(ch);
+    return;
+  }
+
+  if (isHttp(streamUrl)) {
+    showLoader(false);
+    $videoEl.style.display = $iframeEl.style.display = 'none';
+    $httpDesc.textContent = `"${ch.name}" is HTTP. HTTPS pages block this media.`;
+    $httpOpenBtn.onclick = () => window.open(streamUrl, '_blank');
+    $httpNotice.classList.add('show');
+    updateNowPlaying(ch);
+    return;
+  }
+
+  if (isIOS && isDashStream(type, streamUrl)) {
+    showLoader(false);
+    $videoEl.style.display = $iframeEl.style.display = 'none';
+    $dashChName.textContent = ch.name;
+    $dashFallbackBlock.style.display = 'none';
+    $dashNotice.classList.add('show');
+    updateNowPlaying(ch);
+
+    const revealFallback = () => { $dashFallbackBlock.style.display = 'block'; };
+    $dashRetryBtn.onclick = () => attemptOpenInApp(streamUrl, revealFallback);
+    $dashCopyBtn.onclick = () => navigator.clipboard.writeText(streamUrl);
+    attemptOpenInApp(streamUrl, revealFallback);
+    return;
+  }
+
+  // Explicit type='iframe' always wins. If type is missing entirely, fall
+  // back to URL-shape guessing (from B4U engine) rather than assuming HLS.
+  const shouldUseIframe = type === 'iframe' || (!type && looksLikeIframeUrl(streamUrl));
+
+  if (shouldUseIframe) {
+    $videoEl.style.display = 'none';
+    $iframeEl.style.display = 'block';
+    if (ch.sandboxed !== false) $iframeEl.setAttribute('sandbox', SANDBOX_VALUE);
+    else $iframeEl.removeAttribute('sandbox');
+    $iframeEl.src = streamUrl;
+    $iframeEl.onload = () => showLoader(false);
+    $iframeEl.onerror = () => showError('iFrame error');
+  } else if (isDashStream(type, streamUrl)) {
+    $iframeEl.style.display = 'none';
+    $videoEl.style.display = 'block';
+    await playDASH(streamUrl);
+  } else {
+    $iframeEl.style.display = 'none';
+    $videoEl.style.display = 'block';
+    await playHLS(streamUrl);
+  }
+
+  updateNowPlaying(ch);
+}
+
+async function playHLS(streamUrl) { // <--- Make sure this is streamUrl
+  await waitForHls();
+  if (Hls.isSupported()) {
+    hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
+    
+    hlsInstance.on(Hls.Events.ERROR, (e, d) => {
+      if (d.fatal) {
+        switch (d.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            hlsInstance.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            hlsInstance.recoverMediaError();
+            break;
+          default:
+            if (streamRetryCount >= MAX_STREAM_RETRIES) {
+              console.error("Max stream recovery attempts reached. Halting requests.");
+              showError("Stream is currently offline. Please try again later.");
+              teardown();
+              break;
+            }
+            streamRetryCount++;
+            if (currentChannel) playChannel(currentChannel);
+            else showError('HLS error');
+            break;
+        }
+      }
+    });
+
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => { showLoader(false); $videoEl.play().catch(()=>{}); });
+    hlsInstance.loadSource(streamUrl); // <--- Updated to match parameter
+    hlsInstance.attachMedia($videoEl);
+  } else if ($videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    $videoEl.src = streamUrl; // <--- CHANGED FROM 'url' TO 'streamUrl' (Fixes the crash!)
+    $videoEl.addEventListener('loadedmetadata', () => { showLoader(false); $videoEl.play().catch(()=>{}); }, { once: true });
+  } else {
+    showError('HLS not supported');
+  }
+}
+
+
+
+async function playDASH(url) {
+  try {
+    await ensureShaka();
+    const loadPromise = shakaPlayer.load(url);
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DASH timeout')), 10000));
+    await Promise.race([loadPromise, timeoutPromise]);
+    showLoader(false);
+    $videoEl.play().catch(()=>{});
+  } catch (e) {
+    showError('DASH error: Stream unavailable');
+  }
+}
+
+async function teardown() {
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+  if (shakaReady) { try { await shakaPlayer.unload(); } catch {} }
+  $videoEl.pause();
+  $videoEl.removeAttribute('src');
+  $videoEl.load();
+  $iframeEl.src = 'about:blank';
+}
+
+function updateNowPlaying(ch) {
+  $nowPlayingBar.classList.add('visible');
+  $npName.textContent = ch.name;
+}
+function showLoader(s) { $playerLoader.classList.toggle('show', s); }
+function showError(msg) {
+  showLoader(false);
+  $playerErrorMsg.textContent = msg || 'Stream error';
+  $playerError.classList.add('show');
+}
+
+function bindEvents() {
+  $searchInput.addEventListener('input', e => { searchQuery = e.target.value; fullRender(); });
+  
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden || !currentChannel) return;
+
+    const isStalled = !$videoEl.paused && $videoEl.readyState < 3;
+    const isErrored = $videoEl.error !== null;
+
+    if (isStalled || isErrored) {
+      if (hlsInstance) {
+        hlsInstance.startLoad();
+        hlsInstance.recoverMediaError();
+        $videoEl.play().catch(() => {});
+      } 
+            else if (shakaPlayer && shakaReady) {
+        try {
+          // If the player stalls on wake, rely on browser memory, do not ping the network
+          if (streamCache[currentChannel.id || currentChannel.name]) {
+            await shakaPlayer.load(streamCache[currentChannel.id || currentChannel.name]);
+          } else {
+            const currentUrl = await getStreamUrl(currentChannel);
+            if (currentUrl) await shakaPlayer.load(currentUrl);
+          }
+          $videoEl.play().catch(() => {});
+        } catch (e) {
+          if (streamRetryCount < MAX_STREAM_RETRIES) {
+            streamRetryCount++;
+            playChannel(currentChannel);
+          } else {
+            showError("Stream playback stalled.");
+          }
+        }
+      }
+
+    } else if (hlsInstance) {
+      hlsInstance.startLoad();
+    }
+  });
+}
+
+const _nativeOpen = window.open.bind(window);
+(function() {
+  window.open = (url, target, f) => {
+    if (target === '_top' || target === '_parent') return null;
+    return _nativeOpen(url, target, f);
+  };
+})();
+
+document.addEventListener('DOMContentLoaded', init);
+    
+  </script>
+</body>
+  </html>

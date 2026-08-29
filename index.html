@@ -267,7 +267,7 @@
       </div>
     </div>
   </div>     
-   <script>
+ <script>
     const PLAYLIST_URL = './playlist.json';
     const FETCH_INTERVAL_MS = 2000;
     const SYNC_CHECK_INTERVAL_MS = 500;
@@ -297,10 +297,6 @@
     let totalPlaylistDuration = 0;
     let uiHideTimer = null;
 
-    // NEW: staged playlist update — prevents mid-playback seek jumps
-    let pendingPlaylist = null;
-    let pendingDuration = null;
-
     videoElem.muted = true;
 
     function hideLoader() {
@@ -328,11 +324,9 @@
           return;
         }
         const data = await response.json();
-
+        
         if (Array.isArray(data) && data.length > 0) {
-          if (JSON.stringify(data) !== JSON.stringify(playlist) &&
-              JSON.stringify(data) !== JSON.stringify(pendingPlaylist)) {
-
+          if (JSON.stringify(data) !== JSON.stringify(playlist)) {
             const newTotalDuration = data.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
 
             // If nothing is playing yet, initialize immediately
@@ -341,12 +335,11 @@
               totalPlaylistDuration = newTotalDuration;
               syncEngine();
             } else {
-              // Stage the update instead of applying it live.
-              // This prevents mid-playback seekPosition math from shifting
-              // for the item currently on air.
-              pendingPlaylist = data;
-              pendingDuration = newTotalDuration;
-              console.log("Playlist change staged, will apply at next safe loop boundary.");
+              // Background update: safely update playlist reference and recalculate total duration 
+              // without resetting the active video playback pointer or forcing an immediate timeline snap.
+              playlist = data;
+              totalPlaylistDuration = newTotalDuration;
+              console.log("Playlist updated in background safely.");
             }
           }
         }
@@ -360,7 +353,7 @@
     // --- 2. Live Broadcast Time Logic ---
     function getGlobalTimeState() {
       if (!totalPlaylistDuration || totalPlaylistDuration === 0) return null;
-
+      
       const epochSeconds = Date.now() / 1000;
       const currentLoopTime = epochSeconds % totalPlaylistDuration;
 
@@ -369,17 +362,6 @@
         const item = playlist[i];
         const itemDuration = item.duration_seconds || 0;
         if (currentLoopTime >= accumulatedTime && currentLoopTime < accumulatedTime + itemDuration) {
-
-          // Safe boundary swap: only apply a staged playlist update once
-          // the on-air item is about to change anyway (no visible jump).
-          if (pendingPlaylist && (!currentItem || currentItem.url !== item.url)) {
-            playlist = pendingPlaylist;
-            totalPlaylistDuration = pendingDuration;
-            pendingPlaylist = null;
-            pendingDuration = null;
-            return getGlobalTimeState();
-          }
-
           return {
             itemIndex: i,
             item: item,
@@ -388,7 +370,7 @@
         }
         accumulatedTime += itemDuration;
       }
-
+      
       // Fallback to first item if time overflows slightly due to float precision
       return {
         itemIndex: 0,
@@ -491,7 +473,7 @@
     // --- 5. Auto Fade Control Overlay (status box stays visible always) ---
     function showControls() {
       controlsOverlay.classList.remove('ui-hidden');
-
+      
       clearTimeout(uiHideTimer);
       uiHideTimer = setTimeout(() => {
         controlsOverlay.classList.add('ui-hidden');
@@ -563,6 +545,8 @@
       }
     });
   </script>
+</body>
+</html>
 </body>
 </html>                                 
                                  

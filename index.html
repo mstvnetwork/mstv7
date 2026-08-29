@@ -267,7 +267,7 @@
       </div>
     </div>
   </div>     
-  <script>
+   <script>
     const PLAYLIST_URL = './playlist.json';
     const FETCH_INTERVAL_MS = 2000;
     const SYNC_CHECK_INTERVAL_MS = 500;
@@ -297,7 +297,7 @@
     let totalPlaylistDuration = 0;
     let uiHideTimer = null;
 
-    // NEW: fixed anchor — the epoch time at which "loop position 0" began.
+    // Fixed anchor — the epoch time at which "loop position 0" began.
     // This is what makes playback immune to playlist edits.
     let loopAnchorEpoch = null;
 
@@ -341,7 +341,7 @@
     setInterval(fetchPlaylist, FETCH_INTERVAL_MS);
     fetchPlaylist();
 
-    // NEW: rebases the loop anchor so that whatever is CURRENTLY on screen,
+    // Rebases the loop anchor so that whatever is CURRENTLY on screen,
     // at its CURRENT position, remains exactly where it is — regardless of
     // how many items were added/removed elsewhere in the list.
     function applyNewPlaylist(data) {
@@ -362,17 +362,11 @@
 
       if (newIndex === -1) {
         // Current item was removed from playlist entirely.
-        // Keep playing it out from wherever it currently is (don't yank it away),
-        // but adopt the new list/duration for what comes AFTER it ends.
+        // Keep playing it out uninterrupted; re-anchor using current
+        // elapsed time so nothing snaps when it naturally transitions.
+        const elapsed = videoElem.currentTime;
         playlist = data;
         totalPlaylistDuration = data.reduce((acc, it) => acc + (it.duration_seconds || 0), 0);
-        // Re-anchor so "now" maps to the start of the new list, effective
-        // immediately after the current item's natural playback finishes.
-        // We keep the video playing uninterrupted; syncEngine's normal
-        // "currentItem.url !== item.url" branch will transition it cleanly
-        // once time rolls past this item's old slot. To avoid an abrupt
-        // recompute mid-play, anchor so current elapsed time is preserved:
-        const elapsed = videoElem.currentTime;
         loopAnchorEpoch = now - elapsed;
         return;
       }
@@ -385,6 +379,7 @@
 
       // The video's actual current playback position (ground truth).
       const elapsed = videoElem.currentTime;
+      const newTotal = data.reduce((acc, it) => acc + (it.duration_seconds || 0), 0);
 
       // Re-anchor the epoch so that, under the NEW list/duration,
       // "now" maps to exactly (newAccumulated + elapsed) — i.e. exactly
@@ -392,7 +387,13 @@
       loopAnchorEpoch = now - (newAccumulated + elapsed);
 
       playlist = data;
-      totalPlaylistDuration = data.reduce((acc, it) => acc + (it.duration_seconds || 0), 0);
+      totalPlaylistDuration = newTotal;
+
+      // Keep currentItem pointing at the fresh object reference from the
+      // new array so syncEngine's identity check (currentItem.url !== item.url)
+      // doesn't momentarily flip against a stale reference and cause a
+      // brief false "item changed" detection (the repeat-to-item-1 bug).
+      currentItem = data[newIndex];
 
       console.log("Playlist updated — loop re-anchored, zero playback disturbance.");
     }
@@ -596,6 +597,9 @@
       }
     });
   </script>
+</body>
+</html>     
+
 </body>
 </html>
                                  

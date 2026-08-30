@@ -43,18 +43,23 @@
       height: 100%;
       border: none;
       object-fit: contain;
-      z-index: 1;
     }
 
-    /* Touch Shield: Intercepts raw video touches to neutralize Samsung Video Assistant */
-    #touch-shield {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 5000;
-      background: rgba(0, 0, 0, 0.001); /* Forces composite layer */
+    /* Suppress Native Browser Media Controls Overlays (Safari, WebKit, Samsung Internet) */
+    video::-webkit-media-controls {
+      display: none !important;
+    }
+    video::-webkit-media-controls-enclosure {
+      display: none !important;
+    }
+    video::-webkit-media-controls-panel {
+      display: none !important;
+    }
+    video::-webkit-media-controls-start-playback-button {
+      display: none !important;
+    }
+    video::-webkit-media-controls-overlay-play-button {
+      display: none !important;
     }
 
     /* Top-Left Status Box (Always visible, sleek pill style) */
@@ -258,9 +263,6 @@
     <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline disablePictureInPicture controlsList="nodownload nofullscreen noremoteplayback"></video>
     <iframe id="iframe-player" class="media-element" style="display: none;"></iframe>
 
-    <!-- Transparent Shield Overlay to prevent browser assistant hooks -->
-    <div id="touch-shield"></div>
-
     <!-- Bottom Controls -->
     <div id="controls-overlay">
       <div class="controls-left">
@@ -322,16 +324,13 @@
 
     videoElem.muted = true;
 
-    // --- Strict Floating Window & Pop-Out Prevention ---
-    videoElem.addEventListener('enterpictureinpicture', () => {
-      if (document.exitPictureInPicture) {
-        document.exitPictureInPicture().catch(() => {});
+    // Prevent mobile Safari and Samsung Internet native gesture hijacking
+    videoElem.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        showControls();
       }
-    });
-
-    videoElem.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-    });
+    }, { passive: false });
 
     function hideLoader() {
       loaderElem.classList.add('ui-hidden');

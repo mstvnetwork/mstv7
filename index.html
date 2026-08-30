@@ -27,13 +27,12 @@
     top:0; left:0;
     width:100%;
     height:100vh;
-    height:100svh; /* small viewport height: excludes mobile browser chrome */
-    height:100dvh; /* dynamic viewport height: tracks chrome show/hide live */
+    height:100svh;
+    height:100dvh;
     background:#000;
     overflow:hidden;
     touch-action:none;
   }
-  /* Media layers */
   .media-layer{
     position:absolute; top:0; left:0; width:100%; height:100%;
     display:flex; align-items:center; justify-content:center;
@@ -49,7 +48,6 @@
     background:#000;
     outline:none;
   }
-  /* Kill native controls hard */
   video.live-video::-webkit-media-controls,
   video.live-video::-webkit-media-controls-enclosure,
   video.live-video::-webkit-media-controls-panel,
@@ -71,16 +69,14 @@
   iframe.live-iframe{
     width:100%; height:100%;
     border:0; background:#000;
-    pointer-events:none; /* prevent viewer scrubbing embedded UI */
+    pointer-events:none;
   }
-  /* Transparent gesture shield placed over media to block long-press / native seek gestures */
   .gesture-shield{
     position:absolute; inset:0;
     z-index:5;
     background:transparent;
     touch-action:none;
   }
-  /* Now Playing box — transparent, top-left, always visible, live-updating */
   #now-playing{
     position:absolute;
     top:calc(14px + env(safe-area-inset-top, 0px));
@@ -118,7 +114,6 @@
     0%,100%{ opacity:1; transform:scale(1); }
     50%{ opacity:.4; transform:scale(.75); }
   }
-  /* Buffering / loading spinner */
   #buffer-spinner{
     position:absolute; top:50%; left:50%;
     width:46px; height:46px;
@@ -133,7 +128,6 @@
   }
   #buffer-spinner.show{ display:block; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
-  /* Controls bar */
   #controls-bar{
     position:absolute;
     left:0; right:0;
@@ -173,7 +167,6 @@
   .ctrl-btn svg{ width:20px; height:20px; fill:var(--icon); }
   #spacer{ flex:1; }
   #fullscreen-btn{ margin-left:auto; }
-  /* Center tap-to-play overlay (autoplay unlock) */
   #unlock-overlay{
     position:absolute; inset:0;
     z-index:30;
@@ -196,7 +189,6 @@
   }
   #unlock-overlay .unlock-icon svg{ width:30px; height:30px; fill:#fff; margin-left:4px; }
   #unlock-overlay span{ font-size:14px; opacity:.85; letter-spacing:.02em; }
-  /* Error state */
   #error-state{
     position:absolute; inset:0;
     z-index:25;
@@ -250,38 +242,23 @@
 (function(){
   "use strict";
 
-  /* ============================================================
-     CONFIG
-     ============================================================ */
   var CONFIG = {
-    // Point this at your live playlist JSON (must be served with
-    // cache-control friendly headers; a "?t=" cache-buster is added).
     PLAYLIST_URL: "playlist.json",
-    // How often we re-fetch the playlist JSON to catch edits, in ms.
     POLL_INTERVAL_MS: 2000,
-    // How far (seconds) the live video is allowed to drift from the
-    // calculated global-sync position before we force a correction.
-    DRIFT_TOLERANCE_SEC: 0.75,
-    // Drift correction check frequency, in ms.
-    DRIFT_CHECK_MS: 500,
-    // Minimum duration fallback (seconds) if an item is missing/invalid duration.
+    DRIFT_TOLERANCE_SEC: 3.0, // Increased tolerance for live stability
+    DRIFT_CHECK_MS: 1000,
     DEFAULT_DURATION_SEC: 60,
-    // Fixed schedule anchor start time. Accepts an ISO 8601 string (e.g., "2026-08-31T00:00:00Z"),
-    // epoch milliseconds/seconds, or null to check playlist JSON / default to 0 (Unix epoch).
     schedule_start: null
   };
 
-  /* ============================================================
-     STATE
-     ============================================================ */
   var state = {
-    playlist: [],           // last known-good playlist
-    playlistRaw: "",         // raw JSON text, to detect real changes cheaply
-    totalDuration: 0,        // sum of all durations in current playlist
-    cumulative: [],          // cumulative start-offsets per item
-    currentIndex: -1,        // index of item currently rendered
-    currentEl: null,         // active media element (video or iframe wrapper)
-    muted: true,              // start muted to satisfy autoplay policies
+    playlist: [],
+    playlistRaw: "",
+    totalDuration: 0,
+    cumulative: [],
+    currentIndex: -1,
+    currentEl: null,
+    muted: true,
     userGestureUnlocked: false,
     fetchInFlight: false,
     driftTimer: null,
@@ -300,9 +277,6 @@
   var nowPlayingTitle = document.getElementById("np-title");
   var lastNowPlayingText = "";
 
-  // Derive a human-readable title for a playlist item. Prefers an
-  // explicit "title"/"name" field if present in the JSON; falls back
-  // to a cleaned-up filename from the URL so it always shows *something*.
   function deriveTitle(item){
     if (!item) return "";
     if (item.title) return String(item.title);
@@ -319,10 +293,9 @@
 
   function updateNowPlaying(item){
     var text = deriveTitle(item);
-    if (text === lastNowPlayingText) return; // avoid flicker on identical text
+    if (text === lastNowPlayingText) return;
     lastNowPlayingText = text;
     nowPlayingBox.classList.toggle("empty", !text);
-    // fade the title text on change so updates read as "live" not jarring
     nowPlayingTitle.style.opacity = "0";
     setTimeout(function(){
       nowPlayingTitle.textContent = text;
@@ -330,9 +303,6 @@
     }, 120);
   }
 
-  /* ============================================================
-     UTILITIES
-     ============================================================ */
   function nowMs(){ return Date.now(); }
 
   function safeNumber(n, fallback){
@@ -340,7 +310,6 @@
     return (isFinite(v) && v > 0) ? v : fallback;
   }
 
-  // Parse ISO string, timestamp numbers, or fallback to Unix epoch
   function parseScheduleStart(startVal){
     if (!startVal && state.playlist.length && state.playlist[0].schedule_start) {
       startVal = state.playlist[0].schedule_start;
@@ -364,8 +333,6 @@
     return { cumulative: cumulative, total: total };
   }
 
-  // Given the global clock and schedule_start anchor, figure out which playlist index 
-  // is "live" right now, and how many seconds into that item we currently are.
   function computeLivePosition(){
     if (!state.playlist.length || state.totalDuration <= 0) return null;
     
@@ -373,14 +340,12 @@
     var elapsedMs = nowMs() - anchorMs;
     var totalDurationMs = state.totalDuration * 1000;
 
-    // Handle case where client clock is behind schedule_start
     if (elapsedMs < 0) {
       elapsedMs = (elapsedMs % totalDurationMs) + totalDurationMs;
     }
 
     var posInLoop = (elapsedMs / 1000) % state.totalDuration;
 
-    // binary search cumulative[] for the item containing posInLoop
     var lo = 0, hi = state.cumulative.length - 1, idx = 0;
     while (lo <= hi){
       var mid = (lo + hi) >> 1;
@@ -391,9 +356,6 @@
     return { index: idx, offset: offsetIntoItem };
   }
 
-  /* ============================================================
-     PLAYLIST FETCH (strict aggressive polling, non-blocking)
-     ============================================================ */
   function fetchPlaylist(){
     if (state.fetchInFlight) return;
     state.fetchInFlight = true;
@@ -409,46 +371,29 @@
         state.fetchInFlight = false;
         state.lastGoodFetchAt = nowMs();
         hideErrorState();
-        if (text === state.playlistRaw) return; // no change, skip re-parse
+        if (text === state.playlistRaw) return;
         var parsed;
         try { parsed = JSON.parse(text); }
-        catch(e){ console.warn("Invalid playlist JSON, ignoring update:", e); return; }
-        if (!Array.isArray(parsed) || parsed.length === 0){
-          console.warn("Playlist JSON empty/invalid, ignoring update.");
-          return;
-        }
+        catch(e){ console.warn("Invalid playlist JSON:", e); return; }
+        if (!Array.isArray(parsed) || parsed.length === 0) return;
         applyPlaylistUpdate(parsed, text);
       })
       .catch(function(err){
         state.fetchInFlight = false;
-        console.warn("Playlist fetch failed:", err);
-        // Only show reconnect UI if we've been failing for a while —
-        // do NOT interrupt currently playing media.
         if (nowMs() - state.lastGoodFetchAt > 15000 && state.lastGoodFetchAt !== 0){
           showErrorState();
         }
       });
   }
 
-  // Apply a new playlist WITHOUT touching what's currently playing.
-  // Because position is derived purely from the global clock + durations,
-  // swapping the array only changes what plays at the *next* boundary —
-  // there is no seek/jump applied to the currently-live element.
   function applyPlaylistUpdate(newList, rawText){
     var sched = buildSchedule(newList);
     state.playlist = newList;
     state.playlistRaw = rawText;
     state.cumulative = sched.cumulative;
     state.totalDuration = sched.total;
-    // Do not force-switch here. The render loop / item-boundary timer
-    // will naturally pick up the new list on the next check, and only
-    // swap the on-screen item once the currently playing item's own
-    // duration has elapsed (or if the current item no longer exists).
     scheduleNextBoundaryCheck();
 
-    // If only the *metadata* (e.g. a "title" field) of the item that is
-    // already live on screen was edited, reflect that in the Now Playing
-    // box instantly — this never touches video playback/currentTime.
     var pos = computeLivePosition();
     if (pos && pos.index === state.currentIndex && state.playlist[pos.index]){
       updateNowPlaying(state.playlist[pos.index]);
@@ -458,9 +403,6 @@
   function showErrorState(){ errorState.classList.add("show"); }
   function hideErrorState(){ errorState.classList.remove("show"); }
 
-  /* ============================================================
-     MEDIA RENDERING
-     ============================================================ */
   function clearStage(){
     while (stage.firstChild) stage.removeChild(stage.firstChild);
   }
@@ -482,18 +424,26 @@
     video.setAttribute("oncontextmenu", "return false;");
     video.preload = "auto";
 
-    if (item.type === "hls" && window.Hls && window.Hls.isSupported()){
-      var hls = new Hls({ liveSyncDuration: 3, maxBufferLength: 12 });
+    var isHlsStream = (item.type === "hls" || item.type === "m3u8" || item.url.indexOf(".m3u8") !== -1);
+
+    if (isHlsStream && window.Hls && window.Hls.isSupported()){
+      var hls = new Hls({ 
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60
+      });
       hls.loadSource(item.url);
       hls.attachMedia(video);
       layer._hls = hls;
+      layer._isHls = true;
     } else {
       video.src = item.url;
+      layer._isHls = false;
     }
 
     layer.appendChild(video);
 
-    // Gesture shield to block native seek-by-drag / long-press context menus
     var shield = document.createElement("div");
     shield.className = "gesture-shield";
     layer.appendChild(shield);
@@ -537,7 +487,6 @@
     if (!item || !item.url) return;
 
     if (pos.index === state.currentIndex && state.currentEl) {
-      // Same item still live — just keep drift-correcting, don't recreate DOM.
       return;
     }
 
@@ -546,28 +495,26 @@
     var oldEl = state.currentEl;
     var newEl;
 
-    if (item.type === "m3u8" || item.type === "hls"){
-      newEl = createVideoLayer(item, pos.offset);
-    } else if (item.type === "mp4"){
+    var isHlsType = (item.type === "hls" || item.type === "m3u8" || item.url.indexOf(".m3u8") !== -1);
+    if (isHlsType || item.type === "mp4"){
       newEl = createVideoLayer(item, pos.offset);
     } else if (item.type === "iframe"){
       newEl = createIframeLayer(item);
     } else {
-      // Unknown type: skip gracefully to next boundary without crashing playback
-      console.warn("Unknown playlist item type:", item.type);
+      console.warn("Unknown item type:", item.type);
       state.currentIndex = pos.index;
       scheduleNextBoundaryCheck();
       return;
     }
 
     stage.appendChild(newEl);
-    // force layout then fade in
     requestAnimationFrame(function(){ newEl.classList.add("active"); });
 
     if (newEl._video){
       var v = newEl._video;
       var trySeek = function(){
-        if (v.readyState >= 1 && isFinite(pos.offset)){
+        // Skip manual seeking overrides for live HLS to let hls.js handle synchronization natively
+        if (!newEl._isHls && v.readyState >= 1 && isFinite(pos.offset)){
           try { v.currentTime = pos.offset; } catch(e){}
         }
         var p = v.play();
@@ -581,7 +528,6 @@
     state.currentEl = newEl;
     updateNowPlaying(item);
 
-    // Remove old element after fade-out to avoid double-decoding overhead
     if (oldEl){
       setTimeout(function(){
         if (oldEl._hls) { try{ oldEl._hls.destroy(); }catch(e){} }
@@ -599,8 +545,6 @@
     }
   }
 
-  // Schedule a check exactly when the current item is due to end,
-  // so the swap happens precisely on the boundary for every viewer.
   function scheduleNextBoundaryCheck(){
     clearItemAdvanceTimer();
     if (!state.playlist.length) return;
@@ -611,17 +555,15 @@
     state.itemAdvanceTimer = setTimeout(renderCurrentItem, remaining * 1000 + 30);
   }
 
-  /* ============================================================
-     DRIFT CORRECTION — aggressive, snaps back at "lightning speed"
-     ============================================================ */
   function driftCorrectionLoop(){
     var pos = computeLivePosition();
     if (pos && pos.index !== state.currentIndex){
-      // Playlist boundary passed (e.g. tab was backgrounded) — resync now.
       renderCurrentItem();
       return;
     }
-    if (!pos || !state.currentEl || !state.currentEl._video) return;
+    // Skip manual drift forcing entirely if current media element is an HLS live stream
+    if (!pos || !state.currentEl || !state.currentEl._video || state.currentEl._isHls) return;
+    
     var video = state.currentEl._video;
     if (video.readyState < 1) return;
 
@@ -636,9 +578,6 @@
     }
   }
 
-  /* ============================================================
-     AUTOPLAY UNLOCK (mobile browsers require a gesture for sound)
-     ============================================================ */
   function showUnlockOverlay(){
     unlockOverlay.classList.add("show");
   }
@@ -655,9 +594,6 @@
     hideUnlockOverlay();
   });
 
-  /* ============================================================
-     CONTROLS: play/pause, mute, fullscreen — custom UI only
-     ============================================================ */
   var playBtn = document.getElementById("play-btn");
   var playIcon = document.getElementById("play-icon");
   var pauseIcon = document.getElementById("pause-icon");
@@ -667,8 +603,6 @@
   var fsBtn = document.getElementById("fullscreen-btn");
   var fsEnterIcon = document.getElementById("fs-enter-icon");
   var fsExitIcon = document.getElementById("fs-exit-icon");
-
-  var userPaused = false;
 
   function updatePlayIcon(){
     var playing = state.currentEl && state.currentEl._video && !state.currentEl._video.paused;
@@ -680,15 +614,12 @@
     if (!state.currentEl || !state.currentEl._video) return;
     var v = state.currentEl._video;
     if (v.paused){
-      userPaused = false;
-      // Re-joining: snap straight back to live position — no "resume where you left off"
       var pos = computeLivePosition();
-      if (pos && pos.index === state.currentIndex){
+      if (pos && pos.index === state.currentIndex && !state.currentEl._isHls){
         try { v.currentTime = pos.offset; } catch(e){}
       }
       v.play().catch(showUnlockOverlay);
     } else {
-      userPaused = true;
       v.pause();
     }
     updatePlayIcon();
@@ -728,9 +659,6 @@
   document.addEventListener("fullscreenchange", updateFsIcon);
   document.addEventListener("webkitfullscreenchange", updateFsIcon);
 
-  /* ============================================================
-     UI show/hide on interaction (auto-hide like standard players)
-     ============================================================ */
   function showUI(){
     container.classList.add("show-ui");
     clearTimeout(state.uiHideTimer);
@@ -743,15 +671,10 @@
   container.addEventListener("touchstart", showUI, { passive: true });
   showUI();
 
-  // Continuously reflect actual play state (covers external pause events)
   setInterval(function(){
     updatePlayIcon();
   }, 500);
 
-  /* ============================================================
-     BLOCK NATIVE SEEK GESTURES (Safari / Samsung Internet double-tap
-     seek, swipe-scrub, keyboard arrows, media session hardware keys)
-     ============================================================ */
   document.addEventListener("keydown", function(e){
     var blocked = ["ArrowLeft","ArrowRight","MediaTrackPrevious","MediaTrackNext","MediaRewind","MediaFastForward"];
     if (blocked.indexOf(e.key) !== -1){
@@ -760,31 +683,17 @@
     }
   }, true);
 
-  if ("mediaSession" in navigator){
-    try {
-      navigator.mediaSession.setActionHandler("seekbackward", function(){});
-      navigator.mediaSession.setActionHandler("seekforward", function(){});
-      navigator.mediaSession.setActionHandler("seekto", function(){});
-      navigator.mediaSession.setActionHandler("previoustrack", function(){});
-      navigator.mediaSession.setActionHandler("nexttrack", function(){});
-    } catch(e){}
-  }
-
-  // Block double-tap-to-seek zones and long-press context menu globally
   container.addEventListener("contextmenu", function(e){ e.preventDefault(); });
   var lastTouchEnd = 0;
   container.addEventListener("touchend", function(e){
     var now = nowMs();
-    if (now - lastTouchEnd <= 300){ e.preventDefault(); } // block double-tap gesture
+    if (now - lastTouchEnd <= 300){ e.preventDefault(); }
     lastTouchEnd = now;
   }, { passive:false });
 
-  // Catch any seeked event that still slips through (e.g. Safari's
-  // native seek bar in fullscreen video, or Samsung Internet gesture)
-  // and revert with "lightning speed" — no debounce, immediate snap.
   stage.addEventListener("seeked", function(e){
     var v = e.target;
-    if (!v || v.tagName !== "VIDEO") return;
+    if (!v || v.tagName !== "VIDEO" || (state.currentEl && state.currentEl._isHls)) return;
     var pos = computeLivePosition();
     if (!pos || pos.index !== state.currentIndex) return;
     var drift = Math.abs(v.currentTime - pos.offset);
@@ -793,9 +702,6 @@
     }
   }, true);
 
-  /* ============================================================
-     VISIBILITY: resync immediately on tab/app foreground
-     ============================================================ */
   document.addEventListener("visibilitychange", function(){
     if (document.visibilityState === "visible"){
       renderCurrentItem();
@@ -804,9 +710,6 @@
     }
   });
 
-  /* ============================================================
-     BOOTSTRAP
-     ============================================================ */
   function boot(){
     updateMuteIcon();
     updatePlayIcon();
@@ -815,7 +718,6 @@
     fetchPlaylist();
     state.pollTimer = setInterval(fetchPlaylist, CONFIG.POLL_INTERVAL_MS);
 
-    // Wait for first successful fetch before rendering
     var waitForPlaylist = setInterval(function(){
       if (state.playlist.length){
         clearInterval(waitForPlaylist);
@@ -825,16 +727,15 @@
     }, 100);
   }
 
-  // Load hls.js dynamically (only needed for .m3u8 sources)
   (function loadHlsJs(){
     var s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.15/hls.min.js";
     s.onload = boot;
-    s.onerror = boot; // still boot; mp4/iframe items work without hls.js
+    s.onerror = boot;
     document.head.appendChild(s);
   })();
 
 })();
 </script>
 </body>
-  </html>
+</html>

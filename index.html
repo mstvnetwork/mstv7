@@ -43,27 +43,39 @@
       height: 100%;
       border: none;
       object-fit: contain;
+      z-index: 1;
+    }
+
+    /* Touch Shield: Intercepts raw video touches to neutralize Samsung Video Assistant */
+    #touch-shield {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5000;
+      background: rgba(0, 0, 0, 0.001); /* Forces composite layer */
     }
 
     /* Top-Left Status Box (Always visible, sleek pill style) */
-#debug-status {
-  position: absolute;
-  top: max(5px, env(safe-area-inset-top));
-  left: max(14px, env(safe-area-inset-left));
-  color: rgba(255, 255, 255, 0.9);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 7px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  padding: 4px 10px;
+    #debug-status {
+      position: absolute;
+      top: max(5px, env(safe-area-inset-top));
+      left: max(14px, env(safe-area-inset-left));
+      color: rgba(255, 255, 255, 0.9);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 7px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      padding: 4px 10px;
 
-  z-index: 10000;
-  pointer-events: none;
-  max-width: 60vw;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+      z-index: 10000;
+      pointer-events: none;
+      max-width: 60vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     /* Broadcast TV Bug Logo (Top-Right Transparent Overlay) */
     #tv-logo-overlay {
@@ -245,6 +257,9 @@
     <!-- Media Elements -->
     <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline disablePictureInPicture controlsList="nodownload nofullscreen noremoteplayback"></video>
     <iframe id="iframe-player" class="media-element" style="display: none;"></iframe>
+
+    <!-- Transparent Shield Overlay to prevent browser assistant hooks -->
+    <div id="touch-shield"></div>
 
     <!-- Bottom Controls -->
     <div id="controls-overlay">
@@ -711,4 +726,4 @@
     });
    </script>       
 </body>
-  </html>
+</html>

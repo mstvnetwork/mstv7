@@ -258,7 +258,6 @@
     // cache-control friendly headers; a "?t=" cache-buster is added).
     PLAYLIST_URL: "playlist.json",
     // How often we re-fetch the playlist JSON to catch edits, in ms.
-    // "Strict aggressive fetching" -> short interval.
     POLL_INTERVAL_MS: 2000,
     // How far (seconds) the live video is allowed to drift from the
     // calculated global-sync position before we force a correction.
@@ -267,13 +266,9 @@
     DRIFT_CHECK_MS: 500,
     // Minimum duration fallback (seconds) if an item is missing/invalid duration.
     DEFAULT_DURATION_SEC: 60,
-    // Fixed global schedule anchor (Unix epoch ms). All viewers compute
-    // playlist position relative to this same anchor, guaranteeing every
-    // viewer everywhere is on the same item at the same offset — exactly
-    // like a broadcast TV schedule. Override by adding "schedule_start"
-    // (ISO8601 or epoch seconds) as the FIRST element's field, or leave
-    // as-is to anchor at Unix epoch (0).
-    SCHEDULE_ANCHOR_MS: 0
+    // Fixed schedule anchor start time. Accepts an ISO 8601 string (e.g., "2026-08-31T00:00:00Z"),
+    // epoch milliseconds/seconds, or null to check playlist JSON / default to 0 (Unix epoch).
+    schedule_start: null
   };
 
   /* ============================================================
@@ -345,6 +340,19 @@
     return (isFinite(v) && v > 0) ? v : fallback;
   }
 
+  // Parse ISO string, timestamp numbers, or fallback to Unix epoch
+  function parseScheduleStart(startVal){
+    if (!startVal && state.playlist.length && state.playlist[0].schedule_start) {
+      startVal = state.playlist[0].schedule_start;
+    }
+    if (!startVal) return 0;
+    if (typeof startVal === "number") {
+      return startVal < 10000000000 ? startVal * 1000 : startVal;
+    }
+    var parsed = new Date(startVal).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
   function buildSchedule(list){
     var cumulative = [];
     var total = 0;
@@ -356,14 +364,21 @@
     return { cumulative: cumulative, total: total };
   }
 
-  // Given the global clock, figure out which playlist index is "live"
-  // right now, and how many seconds into that item we currently are.
+  // Given the global clock and schedule_start anchor, figure out which playlist index 
+  // is "live" right now, and how many seconds into that item we currently are.
   function computeLivePosition(){
     if (!state.playlist.length || state.totalDuration <= 0) return null;
-    var elapsedMs = nowMs() - CONFIG.SCHEDULE_ANCHOR_MS;
-    var elapsedSec = elapsedMs / 1000;
-    var posInLoop = elapsedSec % state.totalDuration;
-    if (posInLoop < 0) posInLoop += state.totalDuration;
+    
+    var anchorMs = parseScheduleStart(CONFIG.schedule_start);
+    var elapsedMs = nowMs() - anchorMs;
+    var totalDurationMs = state.totalDuration * 1000;
+
+    // Handle case where client clock is behind schedule_start
+    if (elapsedMs < 0) {
+      elapsedMs = (elapsedMs % totalDurationMs) + totalDurationMs;
+    }
+
+    var posInLoop = (elapsedMs / 1000) % state.totalDuration;
 
     // binary search cumulative[] for the item containing posInLoop
     var lo = 0, hi = state.cumulative.length - 1, idx = 0;

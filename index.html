@@ -24,7 +24,11 @@
   }
   #player-container{
     position:fixed;
-    top:0; left:0; width:100vw; height:100vh;
+    top:0; left:0;
+    width:100%;
+    height:100vh;
+    height:100svh; /* small viewport height: excludes mobile browser chrome */
+    height:100dvh; /* dynamic viewport height: tracks chrome show/hide live */
     background:#000;
     overflow:hidden;
     touch-action:none;
@@ -76,31 +80,40 @@
     background:transparent;
     touch-action:none;
   }
-  /* LIVE badge */
-  #live-badge{
+  /* Now Playing box — transparent, top-left, always visible, live-updating */
+  #now-playing{
     position:absolute;
-    top:14px; left:14px;
+    top:calc(14px + env(safe-area-inset-top, 0px));
+    left:calc(14px + env(safe-area-inset-left, 0px));
     z-index:20;
-    display:flex; align-items:center; gap:6px;
-    background:var(--control-bg);
+    max-width:min(70%, 420px);
+    display:flex; align-items:center; gap:8px;
+    background:rgba(10,10,12,0.4);
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
     color:#fff;
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:.06em;
-    padding:6px 10px 6px 8px;
-    border-radius:20px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.01em;
+    padding:8px 12px;
+    border-radius:8px;
     pointer-events:none;
-    opacity:0;
+    opacity:1;
     transition:opacity .3s ease;
   }
-  #player-container.show-ui #live-badge{ opacity:1; }
-  #live-badge .dot{
-    width:8px; height:8px; border-radius:50%;
+  #now-playing .np-dot{
+    width:7px; height:7px; border-radius:50%;
     background:var(--live-dot);
+    flex-shrink:0;
     animation:pulse 1.4s ease-in-out infinite;
   }
+  #now-playing .np-title{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    transition:opacity .25s ease;
+  }
+  #now-playing.empty{ display:none; }
   @keyframes pulse{
     0%,100%{ opacity:1; transform:scale(1); }
     50%{ opacity:.4; transform:scale(.75); }
@@ -123,15 +136,20 @@
   /* Controls bar */
   #controls-bar{
     position:absolute;
-    left:0; right:0; bottom:0;
+    left:0; right:0;
+    bottom:0;
     z-index:20;
     display:flex; align-items:center; gap:14px;
-    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    padding:12px 16px;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-left:calc(16px + env(safe-area-inset-left, 0px));
+    padding-right:calc(16px + env(safe-area-inset-right, 0px));
     background:linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0));
     opacity:0;
     transform:translateY(12px);
     transition:opacity .3s ease, transform .3s ease;
     pointer-events:none;
+    box-sizing:border-box;
   }
   #player-container.show-ui #controls-bar{
     opacity:1; transform:translateY(0);
@@ -199,7 +217,10 @@
   <div id="buffer-spinner"></div>
   <div id="error-state">Reconnecting to live signal…</div>
 
-  <div id="live-badge"><span class="dot"></span>LIVE</div>
+  <div id="now-playing" class="empty">
+    <span class="np-dot"></span>
+    <span class="np-title" id="np-title"></span>
+  </div>
 
   <div id="unlock-overlay">
     <div class="unlock-icon">
@@ -280,6 +301,39 @@
   var spinner = document.getElementById("buffer-spinner");
   var errorState = document.getElementById("error-state");
   var unlockOverlay = document.getElementById("unlock-overlay");
+  var nowPlayingBox = document.getElementById("now-playing");
+  var nowPlayingTitle = document.getElementById("np-title");
+  var lastNowPlayingText = "";
+
+  // Derive a human-readable title for a playlist item. Prefers an
+  // explicit "title"/"name" field if present in the JSON; falls back
+  // to a cleaned-up filename from the URL so it always shows *something*.
+  function deriveTitle(item){
+    if (!item) return "";
+    if (item.title) return String(item.title);
+    if (item.name) return String(item.name);
+    try {
+      var clean = item.url.split("?")[0].split("#")[0];
+      var last = clean.substring(clean.lastIndexOf("/") + 1);
+      last = decodeURIComponent(last).replace(/\.[a-zA-Z0-9]+$/, "").replace(/[-_]+/g, " ").trim();
+      return last || "Now streaming";
+    } catch(e){
+      return "Now streaming";
+    }
+  }
+
+  function updateNowPlaying(item){
+    var text = deriveTitle(item);
+    if (text === lastNowPlayingText) return; // avoid flicker on identical text
+    lastNowPlayingText = text;
+    nowPlayingBox.classList.toggle("empty", !text);
+    // fade the title text on change so updates read as "live" not jarring
+    nowPlayingTitle.style.opacity = "0";
+    setTimeout(function(){
+      nowPlayingTitle.textContent = text;
+      nowPlayingTitle.style.opacity = "1";
+    }, 120);
+  }
 
   /* ============================================================
      UTILITIES
@@ -376,6 +430,14 @@
     // swap the on-screen item once the currently playing item's own
     // duration has elapsed (or if the current item no longer exists).
     scheduleNextBoundaryCheck();
+
+    // If only the *metadata* (e.g. a "title" field) of the item that is
+    // already live on screen was edited, reflect that in the Now Playing
+    // box instantly — this never touches video playback/currentTime.
+    var pos = computeLivePosition();
+    if (pos && pos.index === state.currentIndex && state.playlist[pos.index]){
+      updateNowPlaying(state.playlist[pos.index]);
+    }
   }
 
   function showErrorState(){ errorState.classList.add("show"); }
@@ -502,6 +564,7 @@
 
     state.currentIndex = pos.index;
     state.currentEl = newEl;
+    updateNowPlaying(item);
 
     // Remove old element after fade-out to avoid double-decoding overhead
     if (oldEl){
@@ -759,4 +822,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>

@@ -243,7 +243,7 @@
     </div>
 
     <!-- Media Elements -->
-    <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline></video>
+    <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline disablePictureInPicture controlsList="nodownload nofullscreen noremoteplayback"></video>
     <iframe id="iframe-player" class="media-element" style="display: none;"></iframe>
 
     <!-- Bottom Controls -->
@@ -306,6 +306,17 @@
     let consecutiveFetchFailures = 0;
 
     videoElem.muted = true;
+
+    // --- Strict Floating Window & Pop-Out Prevention ---
+    videoElem.addEventListener('enterpictureinpicture', () => {
+      if (document.exitPictureInPicture) {
+        document.exitPictureInPicture().catch(() => {});
+      }
+    });
+
+    videoElem.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
 
     function hideLoader() {
       loaderElem.classList.add('ui-hidden');
@@ -701,5 +712,3 @@
    </script>       
 </body>
 </html>
-                                        
-        

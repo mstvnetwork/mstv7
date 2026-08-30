@@ -1,728 +1,762 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Live Sync Broadcast Player</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      height: 100dvh;
-      background-color: #000;
-      overflow: hidden;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-
-    #player-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      background-color: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
-
-    .media-element {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-      object-fit: contain;
-    }
-
-    /* Suppress Native Browser Media Controls Overlays (Safari, WebKit, Samsung Internet) */
-    video::-webkit-media-controls {
-      display: none !important;
-    }
-    video::-webkit-media-controls-enclosure {
-      display: none !important;
-    }
-    video::-webkit-media-controls-panel {
-      display: none !important;
-    }
-    video::-webkit-media-controls-start-playback-button {
-      display: none !important;
-    }
-    video::-webkit-media-controls-overlay-play-button {
-      display: none !important;
-    }
-
-    /* Top-Left Status Box (Always visible, sleek pill style) */
-    #debug-status {
-      position: absolute;
-      top: max(5px, env(safe-area-inset-top));
-      left: max(14px, env(safe-area-inset-left));
-      color: rgba(255, 255, 255, 0.9);
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 7px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-      padding: 4px 10px;
-
-      z-index: 10000;
-      pointer-events: none;
-      max-width: 60vw;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Broadcast TV Bug Logo (Top-Right Transparent Overlay) */
-    #tv-logo-overlay {
-      position: absolute;
-      top: max(14px, env(safe-area-inset-top));
-      right: max(14px, env(safe-area-inset-right));
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      z-index: 10000;
-      pointer-events: none;
-      opacity: 0.55;
-      background: rgba(20, 20, 20, 0.4);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      padding: 4px 9px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      transform-origin: top right;
-    }
-
-    .logo-icon {
-      width: clamp(16px, 2vw, 20px);
-      height: clamp(16px, 2vw, 20px);
-      background: linear-gradient(135deg, rgba(255, 59, 48, 0.85), rgba(255, 149, 0, 0.85));
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .logo-icon svg {
-      width: 65%;
-      height: 65%;
-      fill: #ffffff;
-    }
-
-    .logo-text-container {
-      display: flex;
-      flex-direction: column;
-      line-height: 1;
-    }
-
-    .logo-title {
-      font-size: clamp(9px, 1.1vw, 12px);
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      color: rgba(255, 255, 255, 0.9);
-      text-transform: uppercase;
-    }
-
-    .logo-subtitle {
-      font-size: clamp(6px, 0.7vw, 8px);
-      font-weight: 500;
-      letter-spacing: 0.6px;
-      color: rgba(255, 215, 0, 0.85);
-      text-transform: uppercase;
-      margin-top: 1px;
-    }
-
-    /* Loading Overlay & Spinner */
-    #loader-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      z-index: 9998;
-      pointer-events: none;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-
-    .spinner {
-      width: 54px;
-      height: 54px;
-      border: 4px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #ff3b30;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-
-    .loading-text {
-      color: #ffd700;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Bottom Control Overlay */
-    #controls-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 0 16px calc(16px + env(safe-area-inset-bottom)) 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 9999;
-      transition: opacity 0.4s ease, visibility 0.4s ease;
-    }
-
-    .ui-hidden {
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
-
-    .controls-left, .controls-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* Sleek Round Icon Buttons */
-    .control-btn {
-      background: rgba(25, 25, 25, 0.55);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.85);
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      transition: background 0.2s, transform 0.1s;
-    }
-
-    .control-btn svg {
-      width: 17px;
-      height: 17px;
-      fill: rgba(255, 255, 255, 0.9);
-    }
-
-    .control-btn:active {
-      transform: scale(0.9);
-      background: rgba(50, 50, 50, 0.75);
-    }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Live Sync Player</title>
+<style>
+  :root{
+    --bg:#000;
+    --control-bg: rgba(10,10,12,0.55);
+    --control-bg-hover: rgba(20,20,24,0.75);
+    --accent:#ff2d55;
+    --icon:#fff;
+    --live-dot:#ff2d55;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg);
+    overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  #player-container{
+    position:fixed;
+    top:0; left:0; width:100vw; height:100vh;
+    background:#000;
+    overflow:hidden;
+    touch-action:none;
+  }
+  /* Media layers */
+  .media-layer{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    background:#000;
+    opacity:0;
+    transition:opacity .35s ease;
+    pointer-events:none;
+  }
+  .media-layer.active{ opacity:1; pointer-events:auto; }
+  video.live-video{
+    width:100%; height:100%;
+    object-fit:contain;
+    background:#000;
+    outline:none;
+  }
+  /* Kill native controls hard */
+  video.live-video::-webkit-media-controls,
+  video.live-video::-webkit-media-controls-enclosure,
+  video.live-video::-webkit-media-controls-panel,
+  video.live-video::-webkit-media-controls-play-button,
+  video.live-video::-webkit-media-controls-start-playback-button,
+  video.live-video::-webkit-media-controls-timeline,
+  video.live-video::-webkit-media-controls-current-time-display,
+  video.live-video::-webkit-media-controls-time-remaining-display,
+  video.live-video::-webkit-media-controls-mute-button,
+  video.live-video::-webkit-media-controls-volume-slider,
+  video.live-video::-webkit-media-controls-fullscreen-button,
+  video.live-video::-webkit-media-controls-toggle-closed-captions-button,
+  video.live-video::-webkit-media-controls-overlay-play-button{
+    display:none !important;
+    -webkit-appearance:none !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+  iframe.live-iframe{
+    width:100%; height:100%;
+    border:0; background:#000;
+    pointer-events:none; /* prevent viewer scrubbing embedded UI */
+  }
+  /* Transparent gesture shield placed over media to block long-press / native seek gestures */
+  .gesture-shield{
+    position:absolute; inset:0;
+    z-index:5;
+    background:transparent;
+    touch-action:none;
+  }
+  /* LIVE badge */
+  #live-badge{
+    position:absolute;
+    top:14px; left:14px;
+    z-index:20;
+    display:flex; align-items:center; gap:6px;
+    background:var(--control-bg);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    color:#fff;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.06em;
+    padding:6px 10px 6px 8px;
+    border-radius:20px;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .3s ease;
+  }
+  #player-container.show-ui #live-badge{ opacity:1; }
+  #live-badge .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--live-dot);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.4; transform:scale(.75); }
+  }
+  /* Buffering / loading spinner */
+  #buffer-spinner{
+    position:absolute; top:50%; left:50%;
+    width:46px; height:46px;
+    margin:-23px 0 0 -23px;
+    border-radius:50%;
+    border:3px solid rgba(255,255,255,0.18);
+    border-top-color:#fff;
+    z-index:15;
+    display:none;
+    animation:spin .8s linear infinite;
+    pointer-events:none;
+  }
+  #buffer-spinner.show{ display:block; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  /* Controls bar */
+  #controls-bar{
+    position:absolute;
+    left:0; right:0; bottom:0;
+    z-index:20;
+    display:flex; align-items:center; gap:14px;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0));
+    opacity:0;
+    transform:translateY(12px);
+    transition:opacity .3s ease, transform .3s ease;
+    pointer-events:none;
+  }
+  #player-container.show-ui #controls-bar{
+    opacity:1; transform:translateY(0);
+    pointer-events:auto;
+  }
+  .ctrl-btn{
+    width:42px; height:42px;
+    border-radius:50%;
+    border:none;
+    background:var(--control-bg);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .15s ease, transform .1s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ctrl-btn:hover{ background:var(--control-bg-hover); }
+  .ctrl-btn:active{ transform:scale(.92); }
+  .ctrl-btn svg{ width:20px; height:20px; fill:var(--icon); }
+  #spacer{ flex:1; }
+  #fullscreen-btn{ margin-left:auto; }
+  /* Center tap-to-play overlay (autoplay unlock) */
+  #unlock-overlay{
+    position:absolute; inset:0;
+    z-index:30;
+    background:rgba(0,0,0,0.55);
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    gap:14px;
+    color:#fff;
+    text-align:center;
+    cursor:pointer;
+  }
+  #unlock-overlay.show{ display:flex; }
+  #unlock-overlay .unlock-icon{
+    width:74px; height:74px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid rgba(255,255,255,0.3);
+  }
+  #unlock-overlay .unlock-icon svg{ width:30px; height:30px; fill:#fff; margin-left:4px; }
+  #unlock-overlay span{ font-size:14px; opacity:.85; letter-spacing:.02em; }
+  /* Error state */
+  #error-state{
+    position:absolute; inset:0;
+    z-index:25;
+    display:none;
+    align-items:center; justify-content:center;
+    color:rgba(255,255,255,0.6);
+    font-size:13px;
+    background:#000;
+  }
+  #error-state.show{ display:flex; }
+</style>
 </head>
 <body>
 
-  <div id="player-container">
-    <!-- Top-Left Status Display (always visible) -->
-    <div id="debug-status">Now Playing : Initializing...</div>
+<div id="player-container">
+  <div id="media-stage"></div>
 
-    <!-- Top-Right Transparent TV Watermark Overlay -->
-    <div id="tv-logo-overlay">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
-      </div>
-      <div class="logo-text-container">
-        <span class="logo-title">APNA TV</span>
-        <span class="logo-subtitle">Ghar Jaisa</span>
-      </div>
+  <div id="buffer-spinner"></div>
+  <div id="error-state">Reconnecting to live signal…</div>
+
+  <div id="live-badge"><span class="dot"></span>LIVE</div>
+
+  <div id="unlock-overlay">
+    <div class="unlock-icon">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
     </div>
+    <span>Tap to join live</span>
+  </div>
 
-    <!-- Centered Loader Spinner -->
-    <div id="loader-overlay">
-      <div class="spinner"></div>
-      <div class="loading-text">Please Wait</div>
-    </div>
+  <div id="controls-bar">
+    <button class="ctrl-btn" id="play-btn" aria-label="Play/Pause">
+      <svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="pause-icon" viewBox="0 0 24 24" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <button class="ctrl-btn" id="mute-btn" aria-label="Mute/Unmute">
+      <svg id="unmute-icon" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12z"/></svg>
+      <svg id="mute-icon" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.62l2.45 2.45c.03-.24.05-.5.05-.71v3.67zM3 10v4h4l5 5V5L7 10H3zm14.73 4.73L19.27 16 21 14.27 19.27 12.55 21 10.82 19.27 9.09 17.55 10.82 15.82 9.09 14.09 10.82l1.73 1.73-1.73 1.73L15.82 16z"/></svg>
+    </button>
+    <div id="spacer"></div>
+    <button class="ctrl-btn" id="fullscreen-btn" aria-label="Fullscreen">
+      <svg id="fs-enter-icon" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <svg id="fs-exit-icon" viewBox="0 0 24 24" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+    </button>
+  </div>
+</div>
 
-    <!-- Media Elements -->
-    <video id="native-player" class="media-element" autoplay muted playsinline webkit-playsinline disablePictureInPicture controlsList="nodownload nofullscreen noremoteplayback"></video>
-    <iframe id="iframe-player" class="media-element" style="display: none;"></iframe>
+<script>
+(function(){
+  "use strict";
 
-    <!-- Bottom Controls -->
-    <div id="controls-overlay">
-      <div class="controls-left">
-        <button id="btn-play" class="control-btn" aria-label="Play/Pause">
-          <svg id="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          <svg id="icon-play" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
-        </button>
+  /* ============================================================
+     CONFIG
+     ============================================================ */
+  var CONFIG = {
+    // Point this at your live playlist JSON (must be served with
+    // cache-control friendly headers; a "?t=" cache-buster is added).
+    PLAYLIST_URL: "playlist.json",
+    // How often we re-fetch the playlist JSON to catch edits, in ms.
+    // "Strict aggressive fetching" -> short interval.
+    POLL_INTERVAL_MS: 2000,
+    // How far (seconds) the live video is allowed to drift from the
+    // calculated global-sync position before we force a correction.
+    DRIFT_TOLERANCE_SEC: 0.75,
+    // Drift correction check frequency, in ms.
+    DRIFT_CHECK_MS: 500,
+    // Minimum duration fallback (seconds) if an item is missing/invalid duration.
+    DEFAULT_DURATION_SEC: 60,
+    // Fixed global schedule anchor (Unix epoch ms). All viewers compute
+    // playlist position relative to this same anchor, guaranteeing every
+    // viewer everywhere is on the same item at the same offset — exactly
+    // like a broadcast TV schedule. Override by adding "schedule_start"
+    // (ISO8601 or epoch seconds) as the FIRST element's field, or leave
+    // as-is to anchor at Unix epoch (0).
+    SCHEDULE_ANCHOR_MS: 0
+  };
 
-        <button id="btn-mute" class="control-btn" aria-label="Mute/Unmute">
-          <svg id="icon-muted" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-          <svg id="icon-unmuted" viewBox="0 0 24 24" style="display:none;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        </button>
-      </div>
+  /* ============================================================
+     STATE
+     ============================================================ */
+  var state = {
+    playlist: [],           // last known-good playlist
+    playlistRaw: "",         // raw JSON text, to detect real changes cheaply
+    totalDuration: 0,        // sum of all durations in current playlist
+    cumulative: [],          // cumulative start-offsets per item
+    currentIndex: -1,        // index of item currently rendered
+    currentEl: null,         // active media element (video or iframe wrapper)
+    muted: true,              // start muted to satisfy autoplay policies
+    userGestureUnlocked: false,
+    fetchInFlight: false,
+    driftTimer: null,
+    pollTimer: null,
+    uiHideTimer: null,
+    itemAdvanceTimer: null,
+    lastGoodFetchAt: 0
+  };
 
-      <div class="controls-right">
-        <button id="btn-fullscreen" class="control-btn" aria-label="Fullscreen">
-          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-        </button>
-      </div>
-    </div>
-  </div>     
- <script>
-    const PLAYLIST_URL = './playlist.json';
-    const FALLBACK_VIDEO_URL = 'https://github.com/mstvnetwork/test1/releases/download/v1/fallback.mp4';
-    const FETCH_INTERVAL_MS = 2000;
-    const SYNC_CHECK_INTERVAL_MS = 500;
-    const MAX_ALLOWED_DRIFT_SEC = 0.5; // Strict drift limit to prevent seeking bypass
-    const UI_HIDE_TIMEOUT_MS = 3000;
-    const BUFFER_RECOVERY_TIMEOUT_MS = 3000;
+  var stage = document.getElementById("media-stage");
+  var container = document.getElementById("player-container");
+  var spinner = document.getElementById("buffer-spinner");
+  var errorState = document.getElementById("error-state");
+  var unlockOverlay = document.getElementById("unlock-overlay");
 
-    const container = document.getElementById('player-container');
-    const videoElem = document.getElementById('native-player');
-    const iframeElem = document.getElementById('iframe-player');
-    const debugElem = document.getElementById('debug-status');
-    const loaderElem = document.getElementById('loader-overlay');
-    const controlsOverlay = document.getElementById('controls-overlay');
+  /* ============================================================
+     UTILITIES
+     ============================================================ */
+  function nowMs(){ return Date.now(); }
 
-    const btnPlay = document.getElementById('btn-play');
-    const iconPlay = document.getElementById('icon-play');
-    const iconPause = document.getElementById('icon-pause');
+  function safeNumber(n, fallback){
+    var v = Number(n);
+    return (isFinite(v) && v > 0) ? v : fallback;
+  }
 
-    const btnMute = document.getElementById('btn-mute');
-    const iconMuted = document.getElementById('icon-muted');
-    const iconUnmuted = document.getElementById('icon-unmuted');
-
-    const btnFullscreen = document.getElementById('btn-fullscreen');
-
-    let playlist = [];
-    let hlsInstance = null;
-    let currentItem = null;
-    let currentItemIndex = 0;
-    let currentItemStartTime = null;
-    let totalPlaylistDuration = 0;
-    let uiHideTimer = null;
-    
-    let isFallbackActive = false;
-    let bufferTimeoutTimer = null;
-    let consecutiveFetchFailures = 0;
-
-    videoElem.muted = true;
-
-    // Prevent mobile Safari and Samsung Internet native gesture hijacking
-    videoElem.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        e.preventDefault();
-        showControls();
-      }
-    }, { passive: false });
-
-    function hideLoader() {
-      loaderElem.classList.add('ui-hidden');
+  function buildSchedule(list){
+    var cumulative = [];
+    var total = 0;
+    for (var i = 0; i < list.length; i++){
+      var d = safeNumber(list[i].duration_seconds, CONFIG.DEFAULT_DURATION_SEC);
+      cumulative.push(total);
+      total += d;
     }
-    function showLoader() {
-      loaderElem.classList.remove('ui-hidden');
+    return { cumulative: cumulative, total: total };
+  }
+
+  // Given the global clock, figure out which playlist index is "live"
+  // right now, and how many seconds into that item we currently are.
+  function computeLivePosition(){
+    if (!state.playlist.length || state.totalDuration <= 0) return null;
+    var elapsedMs = nowMs() - CONFIG.SCHEDULE_ANCHOR_MS;
+    var elapsedSec = elapsedMs / 1000;
+    var posInLoop = elapsedSec % state.totalDuration;
+    if (posInLoop < 0) posInLoop += state.totalDuration;
+
+    // binary search cumulative[] for the item containing posInLoop
+    var lo = 0, hi = state.cumulative.length - 1, idx = 0;
+    while (lo <= hi){
+      var mid = (lo + hi) >> 1;
+      if (state.cumulative[mid] <= posInLoop){ idx = mid; lo = mid + 1; }
+      else { hi = mid - 1; }
     }
+    var offsetIntoItem = posInLoop - state.cumulative[idx];
+    return { index: idx, offset: offsetIntoItem };
+  }
 
-    videoElem.addEventListener('playing', () => {
-      clearBufferTimeout();
-      hideLoader();
-    });
-    videoElem.addEventListener('waiting', showLoader);
-    videoElem.addEventListener('seeking', showLoader);
-    videoElem.addEventListener('seeked', () => {
-      if (!videoElem.paused) hideLoader();
-    });
+  /* ============================================================
+     PLAYLIST FETCH (strict aggressive polling, non-blocking)
+     ============================================================ */
+  function fetchPlaylist(){
+    if (state.fetchInFlight) return;
+    state.fetchInFlight = true;
 
-    iframeElem.addEventListener('load', hideLoader);
+    var url = CONFIG.PLAYLIST_URL + (CONFIG.PLAYLIST_URL.indexOf("?") === -1 ? "?" : "&") + "t=" + nowMs();
 
-    // Native completion trigger for seamless track advancement
-    videoElem.addEventListener('ended', () => {
-      if (isFallbackActive || playlist.length === 0) return;
-      advanceToNextTrack();
-    });
-
-    function advanceToNextTrack() {
-      if (playlist.length === 0) return;
-
-      const epochSeconds = Date.now() / 1000;
-      currentItemIndex = (currentItemIndex + 1) % playlist.length;
-      const nextItem = playlist[currentItemIndex];
-      
-      currentItem = nextItem;
-      currentItemStartTime = epochSeconds;
-
-      const displayName = nextItem.name ? nextItem.name : `Video ${currentItemIndex + 1}`;
-      debugElem.textContent = `Now Playing : ${displayName}`;
-      
-      showLoader();
-      loadMediaSource(nextItem, 0);
-    }
-
-    // --- Buffer & Network Failure Tolerances ---
-    function clearBufferTimeout() {
-      if (bufferTimeoutTimer) {
-        clearTimeout(bufferTimeoutTimer);
-        bufferTimeoutTimer = null;
-      }
-    }
-
-    function scheduleFallbackIfUnrecovered(reasonMessage) {
-      if (isFallbackActive || bufferTimeoutTimer || document.hidden) return;
-      
-      bufferTimeoutTimer = setTimeout(() => {
-        triggerFallback(reasonMessage);
-      }, BUFFER_RECOVERY_TIMEOUT_MS);
-    }
-
-    // --- Fallback Mechanism ---
-    function triggerFallback(reasonMessage) {
-      if (isFallbackActive) return;
-      clearBufferTimeout();
-      isFallbackActive = true;
-
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
-
-      iframeElem.style.display = 'none';
-      iframeElem.src = '';
-
-      videoElem.style.display = 'block';
-      videoElem.loop = true;
-
-      const fullFallbackPath = new URL(FALLBACK_VIDEO_URL, window.location.href).href;
-      if (videoElem.src !== fullFallbackPath) {
-        videoElem.src = FALLBACK_VIDEO_URL;
-      }
-
-      videoElem.play().catch(() => {});
-      hideLoader();
-      debugElem.textContent = reasonMessage ? `Now Playing : ${reasonMessage}` : `Now Playing : Fallback Stream`;
-    }
-
-    videoElem.addEventListener('error', () => {
-      scheduleFallbackIfUnrecovered('Playback Error');
-    });
-
-    videoElem.addEventListener('stalled', () => {
-      scheduleFallbackIfUnrecovered('Stream Stalled');
-    });
-
-    // --- Page Visibility Listener ---
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        clearBufferTimeout();
-        consecutiveFetchFailures = 0;
-        if (playlist.length > 0) {
-          syncEngine();
-        } else {
-          fetchPlaylist();
-        }
-      }
-    });
-
-    // --- 1. Fetching Logic ---
-    async function fetchPlaylist() {
-      if (document.hidden) return;
-
-      try {
-        const response = await fetch(`${PLAYLIST_URL}?cachebuster=${Date.now()}`, { cache: 'no-store' });
-        if (!response.ok) {
-          consecutiveFetchFailures++;
-          if (consecutiveFetchFailures >= 3) {
-            triggerFallback(`Playlist Fetch Error (HTTP ${response.status})`);
-          }
+    fetch(url, { cache: "no-store" })
+      .then(function(res){
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function(text){
+        state.fetchInFlight = false;
+        state.lastGoodFetchAt = nowMs();
+        hideErrorState();
+        if (text === state.playlistRaw) return; // no change, skip re-parse
+        var parsed;
+        try { parsed = JSON.parse(text); }
+        catch(e){ console.warn("Invalid playlist JSON, ignoring update:", e); return; }
+        if (!Array.isArray(parsed) || parsed.length === 0){
+          console.warn("Playlist JSON empty/invalid, ignoring update.");
           return;
         }
-        
-        const data = await response.json();
-        consecutiveFetchFailures = 0;
-        
-        if (Array.isArray(data) && data.length > 0) {
-          if (JSON.stringify(data) !== JSON.stringify(playlist)) {
-            playlist = data;
-            totalPlaylistDuration = data.reduce((acc, item) => acc + (item.duration_seconds || 0), 0);
+        applyPlaylistUpdate(parsed, text);
+      })
+      .catch(function(err){
+        state.fetchInFlight = false;
+        console.warn("Playlist fetch failed:", err);
+        // Only show reconnect UI if we've been failing for a while —
+        // do NOT interrupt currently playing media.
+        if (nowMs() - state.lastGoodFetchAt > 15000 && state.lastGoodFetchAt !== 0){
+          showErrorState();
+        }
+      });
+  }
 
-            if (!currentItem) {
-              syncEngine();
-            } else {
-              // Update index of active track in case array ordering shifted
-              const existingIndex = playlist.findIndex(i => i.url === currentItem.url);
-              if (existingIndex !== -1) {
-                currentItemIndex = existingIndex;
-              }
-              console.log("Playlist dynamic update received safely.");
-            }
-          }
-        } else {
-          triggerFallback('Empty Playlist');
-        }
-      } catch (e) {
-        consecutiveFetchFailures++;
-        if (consecutiveFetchFailures >= 3) {
-          triggerFallback('Playlist Network Error');
-        }
-      }
+  // Apply a new playlist WITHOUT touching what's currently playing.
+  // Because position is derived purely from the global clock + durations,
+  // swapping the array only changes what plays at the *next* boundary —
+  // there is no seek/jump applied to the currently-live element.
+  function applyPlaylistUpdate(newList, rawText){
+    var sched = buildSchedule(newList);
+    state.playlist = newList;
+    state.playlistRaw = rawText;
+    state.cumulative = sched.cumulative;
+    state.totalDuration = sched.total;
+    // Do not force-switch here. The render loop / item-boundary timer
+    // will naturally pick up the new list on the next check, and only
+    // swap the on-screen item once the currently playing item's own
+    // duration has elapsed (or if the current item no longer exists).
+    scheduleNextBoundaryCheck();
+  }
+
+  function showErrorState(){ errorState.classList.add("show"); }
+  function hideErrorState(){ errorState.classList.remove("show"); }
+
+  /* ============================================================
+     MEDIA RENDERING
+     ============================================================ */
+  function clearStage(){
+    while (stage.firstChild) stage.removeChild(stage.firstChild);
+  }
+
+  function createVideoLayer(item, startOffset){
+    var layer = document.createElement("div");
+    layer.className = "media-layer";
+
+    var video = document.createElement("video");
+    video.className = "live-video";
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute("webkit-playsinline", "true");
+    video.setAttribute("playsinline", "true");
+    video.muted = state.muted;
+    video.controls = false;
+    video.disablePictureInPicture = true;
+    video.setAttribute("controlsList", "nodownload noremoteplayback noplaybackrate nofullscreen");
+    video.setAttribute("oncontextmenu", "return false;");
+    video.preload = "auto";
+
+    if (item.type === "hls" && window.Hls && window.Hls.isSupported()){
+      var hls = new Hls({ liveSyncDuration: 3, maxBufferLength: 12 });
+      hls.loadSource(item.url);
+      hls.attachMedia(video);
+      layer._hls = hls;
+    } else {
+      video.src = item.url;
     }
-    setInterval(fetchPlaylist, FETCH_INTERVAL_MS);
-    fetchPlaylist();
 
-    // --- 2. Live Synchronization State Resolver ---
-    function getGlobalTimeState() {
-      if (!playlist || playlist.length === 0 || !totalPlaylistDuration) return null;
+    layer.appendChild(video);
 
-      const epochSeconds = Date.now() / 1000;
+    // Gesture shield to block native seek-by-drag / long-press context menus
+    var shield = document.createElement("div");
+    shield.className = "gesture-shield";
+    layer.appendChild(shield);
 
-      // 1. Active session: Calculate expected seek based on currentItemStartTime
-      if (currentItem && currentItemStartTime !== null) {
-        const elapsed = epochSeconds - currentItemStartTime;
-        const duration = currentItem.duration_seconds || 0;
+    layer._video = video;
+    layer._startOffset = startOffset;
+    layer._contextmenuBlock = function(e){ e.preventDefault(); };
+    layer.addEventListener("contextmenu", layer._contextmenuBlock);
 
-        if (elapsed < duration) {
-          return {
-            itemIndex: currentItemIndex,
-            item: currentItem,
-            seekPosition: Math.max(0, elapsed),
-            calculatedStartTime: currentItemStartTime
-          };
-        } else {
-          // Time expired naturally -> step to next sequential track
-          let nextIndex = (currentItemIndex + 1) % playlist.length;
-          return {
-            itemIndex: nextIndex,
-            item: playlist[nextIndex],
-            seekPosition: 0,
-            calculatedStartTime: epochSeconds
-          };
+    video.addEventListener("waiting", function(){ spinner.classList.add("show"); });
+    video.addEventListener("playing", function(){ spinner.classList.remove("show"); });
+    video.addEventListener("canplay", function(){ spinner.classList.remove("show"); });
+
+    return layer;
+  }
+
+  function createIframeLayer(item){
+    var layer = document.createElement("div");
+    layer.className = "media-layer";
+    var iframe = document.createElement("iframe");
+    iframe.className = "live-iframe";
+    iframe.src = item.url;
+    iframe.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
+    iframe.setAttribute("allowfullscreen", "true");
+    iframe.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
+    iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
+    layer.appendChild(iframe);
+
+    var shield = document.createElement("div");
+    shield.className = "gesture-shield";
+    layer.appendChild(shield);
+
+    layer._iframe = iframe;
+    return layer;
+  }
+
+  function renderCurrentItem(){
+    var pos = computeLivePosition();
+    if (!pos) return;
+    var item = state.playlist[pos.index];
+    if (!item || !item.url) return;
+
+    if (pos.index === state.currentIndex && state.currentEl) {
+      // Same item still live — just keep drift-correcting, don't recreate DOM.
+      return;
+    }
+
+    clearItemAdvanceTimer();
+
+    var oldEl = state.currentEl;
+    var newEl;
+
+    if (item.type === "m3u8" || item.type === "hls"){
+      newEl = createVideoLayer(item, pos.offset);
+    } else if (item.type === "mp4"){
+      newEl = createVideoLayer(item, pos.offset);
+    } else if (item.type === "iframe"){
+      newEl = createIframeLayer(item);
+    } else {
+      // Unknown type: skip gracefully to next boundary without crashing playback
+      console.warn("Unknown playlist item type:", item.type);
+      state.currentIndex = pos.index;
+      scheduleNextBoundaryCheck();
+      return;
+    }
+
+    stage.appendChild(newEl);
+    // force layout then fade in
+    requestAnimationFrame(function(){ newEl.classList.add("active"); });
+
+    if (newEl._video){
+      var v = newEl._video;
+      var trySeek = function(){
+        if (v.readyState >= 1 && isFinite(pos.offset)){
+          try { v.currentTime = pos.offset; } catch(e){}
         }
-      }
-
-      // 2. Cold Boot / Page Reload State: Compute live position based on wall-clock epoch modulo
-      const currentLoopTime = epochSeconds % totalPlaylistDuration;
-      let accumulatedTime = 0;
-
-      for (let i = 0; i < playlist.length; i++) {
-        const item = playlist[i];
-        const itemDuration = item.duration_seconds || 0;
-        if (currentLoopTime >= accumulatedTime && currentLoopTime < accumulatedTime + itemDuration) {
-          const seekPos = currentLoopTime - accumulatedTime;
-          return {
-            itemIndex: i,
-            item: item,
-            seekPosition: seekPos,
-            calculatedStartTime: epochSeconds - seekPos
-          };
-        }
-        accumulatedTime += itemDuration;
-      }
-
-      return {
-        itemIndex: 0,
-        item: playlist[0],
-        seekPosition: 0,
-        calculatedStartTime: epochSeconds
+        var p = v.play();
+        if (p && p.catch) p.catch(function(){ showUnlockOverlay(); });
       };
+      if (v.readyState >= 1) trySeek();
+      else v.addEventListener("loadedmetadata", trySeek, { once:true });
     }
 
-    // --- 3. Sync Engine ---
-    function syncEngine() {
-      if (document.hidden) return;
+    state.currentIndex = pos.index;
+    state.currentEl = newEl;
 
-      const state = getGlobalTimeState();
-      if (!state) {
-        if (playlist.length === 0) triggerFallback('No Items Available');
-        return;
-      }
-
-      const { item, seekPosition, calculatedStartTime, itemIndex } = state;
-
-      if (isFallbackActive) {
-        isFallbackActive = false;
-        videoElem.loop = false;
-        currentItem = null;
-      }
-
-      const displayName = item.name ? item.name : `Video ${itemIndex + 1}`;
-      debugElem.textContent = `Now Playing : ${displayName}`;
-
-      if (!currentItem || currentItem.url !== item.url) {
-        currentItem = item;
-        currentItemIndex = itemIndex;
-        currentItemStartTime = calculatedStartTime;
-        showLoader();
-        loadMediaSource(item, seekPosition);
-        return;
-      }
-
-      // Live Drift Check
-      if (item.type === 'mp4' || item.type === 'm3u8') {
-        const drift = Math.abs(videoElem.currentTime - seekPosition);
-        if (drift > MAX_ALLOWED_DRIFT_SEC) {
-          videoElem.currentTime = seekPosition;
-        }
-
-        if (videoElem.paused && iconPlay.style.display === 'none') {
-          videoElem.play().catch(() => {});
-        }
-      }
-    }
-    setInterval(syncEngine, SYNC_CHECK_INTERVAL_MS);
-
-    // --- Anti-Bypass Seeking Revert Logic ---
-    videoElem.addEventListener('seeking', () => {
-      if (isFallbackActive) return;
-      const state = getGlobalTimeState();
-      if (state && (state.item.type === 'mp4' || state.item.type === 'm3u8')) {
-        const drift = Math.abs(videoElem.currentTime - state.seekPosition);
-        if (drift > MAX_ALLOWED_DRIFT_SEC) {
-          videoElem.currentTime = state.seekPosition;
-        }
-      }
-    });
-
-    // --- 4. Switch Media Types ---
-    function loadMediaSource(item, initialSeek) {
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
-
-      videoElem.loop = false;
-
-      if (item.type === 'iframe') {
-        videoElem.style.display = 'none';
-        videoElem.pause();
-        iframeElem.style.display = 'block';
-        if (iframeElem.src !== item.url) {
-          iframeElem.src = item.url;
-        }
-      } else {
-        iframeElem.style.display = 'none';
-        iframeElem.src = '';
-        videoElem.style.display = 'block';
-
-        if (item.type === 'm3u8') {
-          if (Hls.isSupported()) {
-            hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
-
-            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-              if (data.fatal) {
-                switch (data.type) {
-                  case Hls.ErrorTypes.NETWORK_ERROR:
-                    hlsInstance.startLoad();
-                    scheduleFallbackIfUnrecovered(`Stream Network Error`);
-                    break;
-                  case Hls.ErrorTypes.MEDIA_ERROR:
-                    hlsInstance.recoverMediaError();
-                    scheduleFallbackIfUnrecovered(`Stream Media Error`);
-                    break;
-                  default:
-                    triggerFallback(`Fatal Stream Error (${data.type})`);
-                    break;
-                }
-              }
-            });
-
-            hlsInstance.loadSource(item.url);
-            hlsInstance.attachMedia(videoElem);
-            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-              videoElem.currentTime = initialSeek;
-              videoElem.play().catch(() => {});
-            });
-          } else if (videoElem.canPlayType('application/vnd.apple.mpegurl')) {
-            videoElem.src = item.url;
-            videoElem.currentTime = initialSeek;
-            videoElem.play().catch(() => {});
-          }
-        } else if (item.type === 'mp4') {
-          if (videoElem.src !== item.url) {
-            videoElem.src = item.url;
-          }
-          videoElem.currentTime = initialSeek;
-          videoElem.play().catch(() => {});
-        }
-      }
+    // Remove old element after fade-out to avoid double-decoding overhead
+    if (oldEl){
+      setTimeout(function(){
+        if (oldEl._hls) { try{ oldEl._hls.destroy(); }catch(e){} }
+        if (oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      }, 400);
     }
 
-    // --- 5. Controls Overlay ---
-    function showControls() {
-      controlsOverlay.classList.remove('ui-hidden');
-      
-      clearTimeout(uiHideTimer);
-      uiHideTimer = setTimeout(() => {
-        controlsOverlay.classList.add('ui-hidden');
-      }, UI_HIDE_TIMEOUT_MS);
+    scheduleNextBoundaryCheck();
+  }
+
+  function clearItemAdvanceTimer(){
+    if (state.itemAdvanceTimer){
+      clearTimeout(state.itemAdvanceTimer);
+      state.itemAdvanceTimer = null;
     }
+  }
 
-    container.addEventListener('mousemove', showControls);
-    container.addEventListener('click', showControls);
-    container.addEventListener('touchstart', showControls, { passive: true });
-    container.addEventListener('pointerdown', showControls, { passive: true });
-    container.addEventListener('pointermove', showControls, { passive: true });
-    document.addEventListener('mousemove', showControls);
-    document.addEventListener('pointerdown', showControls, { passive: true });
-    showControls();
+  // Schedule a check exactly when the current item is due to end,
+  // so the swap happens precisely on the boundary for every viewer.
+  function scheduleNextBoundaryCheck(){
+    clearItemAdvanceTimer();
+    if (!state.playlist.length) return;
+    var pos = computeLivePosition();
+    if (!pos) return;
+    var duration = safeNumber(state.playlist[pos.index].duration_seconds, CONFIG.DEFAULT_DURATION_SEC);
+    var remaining = Math.max(0.05, duration - pos.offset);
+    state.itemAdvanceTimer = setTimeout(renderCurrentItem, remaining * 1000 + 30);
+  }
 
-    btnPlay.addEventListener('click', (e) => {
+  /* ============================================================
+     DRIFT CORRECTION — aggressive, snaps back at "lightning speed"
+     ============================================================ */
+  function driftCorrectionLoop(){
+    var pos = computeLivePosition();
+    if (pos && pos.index !== state.currentIndex){
+      // Playlist boundary passed (e.g. tab was backgrounded) — resync now.
+      renderCurrentItem();
+      return;
+    }
+    if (!pos || !state.currentEl || !state.currentEl._video) return;
+    var video = state.currentEl._video;
+    if (video.readyState < 1) return;
+
+    var expected = pos.offset;
+    var actual = video.currentTime;
+    var drift = actual - expected;
+
+    if (Math.abs(drift) > CONFIG.DRIFT_TOLERANCE_SEC){
+      try {
+        video.currentTime = expected;
+      } catch(e){}
+    }
+  }
+
+  /* ============================================================
+     AUTOPLAY UNLOCK (mobile browsers require a gesture for sound)
+     ============================================================ */
+  function showUnlockOverlay(){
+    unlockOverlay.classList.add("show");
+  }
+  function hideUnlockOverlay(){
+    unlockOverlay.classList.remove("show");
+  }
+  unlockOverlay.addEventListener("click", function(){
+    state.userGestureUnlocked = true;
+    if (state.currentEl && state.currentEl._video){
+      var v = state.currentEl._video;
+      v.muted = state.muted;
+      v.play().catch(function(){});
+    }
+    hideUnlockOverlay();
+  });
+
+  /* ============================================================
+     CONTROLS: play/pause, mute, fullscreen — custom UI only
+     ============================================================ */
+  var playBtn = document.getElementById("play-btn");
+  var playIcon = document.getElementById("play-icon");
+  var pauseIcon = document.getElementById("pause-icon");
+  var muteBtn = document.getElementById("mute-btn");
+  var muteIcon = document.getElementById("mute-icon");
+  var unmuteIcon = document.getElementById("unmute-icon");
+  var fsBtn = document.getElementById("fullscreen-btn");
+  var fsEnterIcon = document.getElementById("fs-enter-icon");
+  var fsExitIcon = document.getElementById("fs-exit-icon");
+
+  var userPaused = false;
+
+  function updatePlayIcon(){
+    var playing = state.currentEl && state.currentEl._video && !state.currentEl._video.paused;
+    playIcon.style.display = playing ? "none" : "block";
+    pauseIcon.style.display = playing ? "block" : "none";
+  }
+
+  playBtn.addEventListener("click", function(){
+    if (!state.currentEl || !state.currentEl._video) return;
+    var v = state.currentEl._video;
+    if (v.paused){
+      userPaused = false;
+      // Re-joining: snap straight back to live position — no "resume where you left off"
+      var pos = computeLivePosition();
+      if (pos && pos.index === state.currentIndex){
+        try { v.currentTime = pos.offset; } catch(e){}
+      }
+      v.play().catch(showUnlockOverlay);
+    } else {
+      userPaused = true;
+      v.pause();
+    }
+    updatePlayIcon();
+  });
+
+  function updateMuteIcon(){
+    muteIcon.style.display = state.muted ? "block" : "none";
+    unmuteIcon.style.display = state.muted ? "none" : "block";
+  }
+
+  muteBtn.addEventListener("click", function(){
+    state.muted = !state.muted;
+    if (state.currentEl && state.currentEl._video){
+      state.currentEl._video.muted = state.muted;
+      if (!state.muted) state.currentEl._video.play().catch(showUnlockOverlay);
+    }
+    updateMuteIcon();
+  });
+
+  function isFullscreen(){
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  function updateFsIcon(){
+    fsEnterIcon.style.display = isFullscreen() ? "none" : "block";
+    fsExitIcon.style.display = isFullscreen() ? "block" : "none";
+  }
+  fsBtn.addEventListener("click", function(){
+    if (isFullscreen()){
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+      var el = container;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+  });
+  document.addEventListener("fullscreenchange", updateFsIcon);
+  document.addEventListener("webkitfullscreenchange", updateFsIcon);
+
+  /* ============================================================
+     UI show/hide on interaction (auto-hide like standard players)
+     ============================================================ */
+  function showUI(){
+    container.classList.add("show-ui");
+    clearTimeout(state.uiHideTimer);
+    state.uiHideTimer = setTimeout(function(){
+      container.classList.remove("show-ui");
+    }, 3000);
+  }
+  container.addEventListener("mousemove", showUI);
+  container.addEventListener("click", showUI);
+  container.addEventListener("touchstart", showUI, { passive: true });
+  showUI();
+
+  // Continuously reflect actual play state (covers external pause events)
+  setInterval(function(){
+    updatePlayIcon();
+  }, 500);
+
+  /* ============================================================
+     BLOCK NATIVE SEEK GESTURES (Safari / Samsung Internet double-tap
+     seek, swipe-scrub, keyboard arrows, media session hardware keys)
+     ============================================================ */
+  document.addEventListener("keydown", function(e){
+    var blocked = ["ArrowLeft","ArrowRight","MediaTrackPrevious","MediaTrackNext","MediaRewind","MediaFastForward"];
+    if (blocked.indexOf(e.key) !== -1){
+      e.preventDefault();
       e.stopPropagation();
-      if (videoElem.paused) {
-        videoElem.play();
-        iconPlay.style.display = 'none';
-        iconPause.style.display = 'block';
-      } else {
-        videoElem.pause();
-        iconPlay.style.display = 'block';
-        iconPause.style.display = 'none';
-      }
-    });
+    }
+  }, true);
 
-    btnMute.addEventListener('click', (e) => {
-      e.stopPropagation();
-      videoElem.muted = !videoElem.muted;
-      if (videoElem.muted) {
-        iconMuted.style.display = 'block';
-        iconUnmuted.style.display = 'none';
-      } else {
-        iconMuted.style.display = 'none';
-        iconUnmuted.style.display = 'block';
-      }
-    });
+  if ("mediaSession" in navigator){
+    try {
+      navigator.mediaSession.setActionHandler("seekbackward", function(){});
+      navigator.mediaSession.setActionHandler("seekforward", function(){});
+      navigator.mediaSession.setActionHandler("seekto", function(){});
+      navigator.mediaSession.setActionHandler("previoustrack", function(){});
+      navigator.mediaSession.setActionHandler("nexttrack", function(){});
+    } catch(e){}
+  }
 
-    btnFullscreen.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        if (container.requestFullscreen) {
-          container.requestFullscreen();
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
-        } else if (videoElem.webkitEnterFullscreen) {
-          videoElem.webkitEnterFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
+  // Block double-tap-to-seek zones and long-press context menu globally
+  container.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  var lastTouchEnd = 0;
+  container.addEventListener("touchend", function(e){
+    var now = nowMs();
+    if (now - lastTouchEnd <= 300){ e.preventDefault(); } // block double-tap gesture
+    lastTouchEnd = now;
+  }, { passive:false });
+
+  // Catch any seeked event that still slips through (e.g. Safari's
+  // native seek bar in fullscreen video, or Samsung Internet gesture)
+  // and revert with "lightning speed" — no debounce, immediate snap.
+  stage.addEventListener("seeked", function(e){
+    var v = e.target;
+    if (!v || v.tagName !== "VIDEO") return;
+    var pos = computeLivePosition();
+    if (!pos || pos.index !== state.currentIndex) return;
+    var drift = Math.abs(v.currentTime - pos.offset);
+    if (drift > CONFIG.DRIFT_TOLERANCE_SEC){
+      try { v.currentTime = pos.offset; } catch(err){}
+    }
+  }, true);
+
+  /* ============================================================
+     VISIBILITY: resync immediately on tab/app foreground
+     ============================================================ */
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible"){
+      renderCurrentItem();
+      driftCorrectionLoop();
+      fetchPlaylist();
+    }
+  });
+
+  /* ============================================================
+     BOOTSTRAP
+     ============================================================ */
+  function boot(){
+    updateMuteIcon();
+    updatePlayIcon();
+    updateFsIcon();
+
+    fetchPlaylist();
+    state.pollTimer = setInterval(fetchPlaylist, CONFIG.POLL_INTERVAL_MS);
+
+    // Wait for first successful fetch before rendering
+    var waitForPlaylist = setInterval(function(){
+      if (state.playlist.length){
+        clearInterval(waitForPlaylist);
+        renderCurrentItem();
+        state.driftTimer = setInterval(driftCorrectionLoop, CONFIG.DRIFT_CHECK_MS);
       }
-    });
-   </script>       
+    }, 100);
+  }
+
+  // Load hls.js dynamically (only needed for .m3u8 sources)
+  (function loadHlsJs(){
+    var s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.15/hls.min.js";
+    s.onload = boot;
+    s.onerror = boot; // still boot; mp4/iframe items work without hls.js
+    document.head.appendChild(s);
+  })();
+
+})();
+</script>
 </body>
-</html>
+  </html>

@@ -6,8 +6,27 @@
     "name": "Song 1",
     "type": "mp4",
     "url": "https://github.com/mstvnetwork/test1/releases/download/v1/song4.mp4",
-    "duration_seconds": 180
+    "duration_seconds": 166
+},
+{
+    "name": "Song 1",
+    "type": "mp4",
+    "url": "https://github.com/mstvnetwork/test1/releases/download/v1/song1.mp4",
+    "duration_seconds": 155
+},
+    {
+    "name": "Song 1",
+    "type": "mp4",
+    "url": "https://github.com/mstvnetwork/test1/releases/download/v1/song2.mp4",
+    "duration_seconds": 137
+},
+    {
+    "name": "Song 1",
+    "type": "mp4",
+    "url": "https://github.com/mstvnetwork/test1/releases/download/v1/song3.mp4",
+    "duration_seconds": 138
 }
+  
   
   
  ]

@@ -1,6 +1,6 @@
 export async function onRequest(context) {
   // ⚠️ REPLACE WITH YOUR ACTUAL GITHUB USERNAME AND REPO NAME
-  const rawJsonUrl = "https://githubusercontent.com";
+  const rawJsonUrl = "https://mstvnetwork.github.io/mstv7/playlist.json";
   
   let schedule = [];
   try {
